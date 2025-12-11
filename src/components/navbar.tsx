@@ -1,0 +1,157 @@
+"use client";
+
+import Link from "next/link";
+import { MessageCircle, LogOut, User } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "~/components/ui/navigation-menu";
+import { useAppSelector } from "~/redux/hooks";
+import { selectUserLoggedInStatus } from "~/redux/slices/user-selector";
+
+export function Navbar() {
+  const isLoggedIn = useAppSelector(selectUserLoggedInStatus);
+
+  return (
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent">
+            <MessageCircle className="h-5 w-5 text-accent-foreground" />
+          </div>
+          <span className="text-xl font-bold tracking-tight">PAO</span>
+        </Link>
+
+        <NavigationMenu className="hidden md:flex">
+          <NavigationMenuList>
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                <Link href="/">Home</Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                <Link href="/features">Features</Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                <Link href="/about">About</Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                <Link href="/contact">Contact</Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+
+            <NavigationMenuItem>
+              <NavigationMenuTrigger className="bg-transparent hover:bg-secondary hover:text-secondary-foreground data-[state=open]:bg-secondary">
+                Resources
+              </NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="grid w-[280px] gap-2 p-4">
+                  <li>
+                    <NavigationMenuLink asChild>
+                      <Link
+                        href="/pricing"
+                        className="flex select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-secondary hover:text-secondary-foreground"
+                      >
+                        <div>
+                          <div className="text-sm font-medium">Pricing</div>
+                          <p className="text-sm text-muted-foreground">Plans for every team size</p>
+                        </div>
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
+                  <li>
+                    <NavigationMenuLink asChild>
+                      <Link
+                        href="/help"
+                        className="flex select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-secondary hover:text-secondary-foreground"
+                      >
+                        <div>
+                          <div className="text-sm font-medium">Help Center</div>
+                          <p className="text-sm text-muted-foreground">Get support and FAQs</p>
+                        </div>
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
+                  <li>
+                    <NavigationMenuLink asChild>
+                      <Link
+                        href="/blog"
+                        className="flex select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-secondary hover:text-secondary-foreground"
+                      >
+                        <div>
+                          <div className="text-sm font-medium">Blog</div>
+                          <p className="text-sm text-muted-foreground">Latest news and updates</p>
+                        </div>
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
+                  <li>
+                    <NavigationMenuLink asChild>
+                      <Link
+                        href="/status"
+                        className="flex select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-secondary hover:text-secondary-foreground"
+                      >
+                        <div>
+                          <div className="text-sm font-medium">Status</div>
+                          <p className="text-sm text-muted-foreground">System status and uptime</p>
+                        </div>
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
+                  <li>
+                    <NavigationMenuLink asChild>
+                      <Link
+                        href="/privacy"
+                        className="flex select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-secondary hover:text-secondary-foreground"
+                      >
+                        <div>
+                          <div className="text-sm font-medium">Privacy Policy</div>
+                          <p className="text-sm text-muted-foreground">How we protect your data</p>
+                        </div>
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
+          </NavigationMenuList>
+        </NavigationMenu>
+
+        <div className="flex items-center gap-3">
+          {isLoggedIn ? (
+            <>
+              <Link href="/chat">
+                <Button className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90">Start Chatting</Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/login">
+                <Button variant="ghost" className="rounded-full">
+                  Login
+                </Button>
+              </Link>
+              <Link href="/signup">
+                <Button className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90">Get Started</Button>
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
