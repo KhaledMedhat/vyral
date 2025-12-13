@@ -2,8 +2,10 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { Action, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "~/redux/store";
 import { HYDRATE } from "next-redux-wrapper";
-import { CreateAccountRequest, CreateAccountResponse, SignInRequest, StatusDuration, StatusType } from "~/interfaces/user.interface";
-import { setUserLoggingInStatus } from "~/redux/slices/user-slice";
+import { CreateAccountRequest, CreateAccountResponse, SignInRequest, StatusDuration, StatusType, User } from "~/interfaces/user.interface";
+import { setUserInfo, setUserLoggingInStatus } from "~/redux/slices/user/user-slice";
+import { Channel } from "~/interfaces/channels.interface";
+import { setChannels } from "../slices/channels/channels-slice";
 
 function isHydrateAction(action: Action): action is PayloadAction<RootState> {
   return action.type === HYDRATE;
@@ -38,13 +40,6 @@ export const authApi = createApi({
         method: "POST",
         body: data,
       }),
-      async onQueryStarted(_, { dispatch }) {
-        try {
-          dispatch(setUserLoggingInStatus(true));
-        } catch {
-          dispatch(setUserLoggingInStatus(false));
-        }
-      },
     }),
 
     logout: builder.mutation<
@@ -68,7 +63,22 @@ export const authApi = createApi({
         body: data,
       }),
     }),
+    getUserInfo: builder.query<{ user: User; channels: Channel[] }, void>({
+      query: () => ({
+        url: "/auth/get-profile",
+      }),
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(setUserLoggingInStatus(true));
+          dispatch(setUserInfo(data.user));
+          dispatch(setChannels(data.channels));
+        } catch {
+          dispatch(setUserLoggingInStatus(false));
+        }
+      },
+    }),
   }),
 });
 
-export const { useSignInMutation, useFinalizingProviderUsernameMutation, useLogoutMutation, useCreateAccountMutation } = authApi;
+export const { useSignInMutation, useFinalizingProviderUsernameMutation, useLogoutMutation, useCreateAccountMutation, useGetUserInfoQuery } = authApi;

@@ -4,10 +4,11 @@ import storage from "redux-persist/lib/storage"; // defaults to localStorage for
 import { authApi } from "./apis/auth.api";
 // import { userRoute } from "../routes/userRoute";
 // import { channelRoute } from "../routes/channelRoute";
-import userReducer from "./slices/user-slice";
+import userReducer from "./slices/user/user-slice";
+import channelReducer from "./slices/channels/channels-slice";
+import { channelApi } from "./apis/channel.api";
 // import appReducer from "../slices/app/appSlice";
 // import { messageRoute } from "../routes/messageRoute";
-// import channelReducer from "../slices/channels/channelsSlice";
 // import callSlice from "../slices/call/callSlice";
 
 const persistConfig = {
@@ -21,10 +22,10 @@ const userPersistConfig = {
   key: "user",
 };
 
-// const channelPersistConfig = {
-//   ...persistConfig,
-//   key: "channels",
-// };
+const channelPersistConfig = {
+  ...persistConfig,
+  key: "channels",
+};
 
 // const callPersistConfig = {
 //   ...persistConfig,
@@ -42,23 +43,22 @@ const userPersistConfig = {
 const persistedUserReducer = persistReducer(userPersistConfig, userReducer);
 // const persistedAppReducer = persistReducer(appPersistConfig, appReducer);
 // const persistedCallReducer = persistReducer(callPersistConfig, callSlice);
-// const persistedChannelReducer = persistReducer(
-//   channelPersistConfig,
-//   channelReducer
-// );
+const persistedChannelReducer = persistReducer(channelPersistConfig, channelReducer);
 
 export const store = configureStore({
   reducer: {
     // Add the RTK Query reducer to the store
     [authApi.reducerPath]: authApi.reducer,
     // [userRoute.reducerPath]: userRoute.reducer,
-    // [channelRoute.reducerPath]: channelRoute.reducer,
+    [channelApi.reducerPath]: channelApi.reducer,
     // [messageRoute.reducerPath]: messageRoute.reducer,
     // call: persistedCallReducer,
     user: persistedUserReducer,
     // app: persistedAppReducer,
-    // channels: persistedChannelReducer,
+    channels: persistedChannelReducer,
   },
+  devTools: process.env.NODE_ENV !== "production",
+
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
@@ -86,9 +86,9 @@ export const store = configureStore({
         ],
       },
     }).concat(
-      authApi.middleware
+      authApi.middleware,
       //   userRoute.middleware,
-      //   channelRoute.middleware,
+      channelApi.middleware
       //   messageRoute.middleware
     ), // Add the middleware for RTK Query
 });

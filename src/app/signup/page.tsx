@@ -13,7 +13,7 @@ import { Input } from "~/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 import { Checkbox } from "~/components/ui/checkbox";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "~/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "~/components/ui/form";
 import { AnimatedBackground } from "~/components/ui/animated-background";
 import { signupStep1Schema, signupStep2Schema, type SignupStep1Values, type SignupStep2Values } from "~/lib/validation";
 import { useCreateAccountMutation } from "~/redux/apis/auth.api";
@@ -21,6 +21,7 @@ import useUpload from "~/hooks/use-upload";
 import { toast } from "sonner";
 import { ConfigPrefix } from "~/interfaces/app.interface";
 import { Spinner } from "~/components/ui/spinner";
+import { IconX } from "@tabler/icons-react";
 
 export default function SignupPage() {
   const [step, setStep] = useState(1);
@@ -28,7 +29,6 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isUploadingLoading, setIsUploadingLoading] = useState(false);
   const [step1Data, setStep1Data] = useState<SignupStep1Values | null>(null);
-  const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [createAccount, { isLoading: isCreatingAccount }] = useCreateAccountMutation();
   const { startUpload } = useUpload(setIsUploadingLoading, ConfigPrefix.SINGLE_IMAGE_UPLOADER);
@@ -72,7 +72,6 @@ export default function SignupPage() {
     const file = e.target.files?.[0];
     if (file) {
       step2Form.setValue("profileImage", file);
-      // setProfileImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         const imageUrl = reader.result as string;
@@ -103,7 +102,6 @@ export default function SignupPage() {
                 step2Form.reset();
                 step1Form.reset();
                 setStep1Data(null);
-                setProfileImage(null);
                 setProfileImageUrl(null);
                 router.push("/login");
                 toast.success("Account has been created", {
@@ -131,7 +129,6 @@ export default function SignupPage() {
             step2Form.reset();
             step1Form.reset();
             setStep1Data(null);
-            setProfileImage(null);
             setProfileImageUrl(null);
             router.push(`/channels/${res.channelSlug}`);
             toast.success("Account has been created", {
@@ -162,7 +159,6 @@ export default function SignupPage() {
           step2Form.reset();
           step1Form.reset();
           setStep1Data(null);
-          setProfileImage(null);
           setProfileImageUrl(null);
           router.push("/login");
           toast.success("Account has been created", {
@@ -433,6 +429,19 @@ export default function SignupPage() {
                   <form onSubmit={step2Form.handleSubmit(onStep2Submit)} className="space-y-6">
                     <div className="flex flex-col items-center gap-4">
                       <div className="relative group">
+                        {profileImageUrl && (
+                          <Button
+                            variant="destructive"
+                            size="icon-sm"
+                            className="absolute top-0 right-0 rounded-full z-10"
+                            onClick={() => {
+                              setProfileImageUrl(null);
+                              step2Form.setValue("profileImage", undefined);
+                            }}
+                          >
+                            <IconX className="size-4" />
+                          </Button>
+                        )}
                         <div
                           className={`w-28 h-28 rounded-full border-2 border-dashed border-border flex items-center justify-center overflow-hidden transition-all group-hover:border-accent ${
                             profileImageUrl ? "border-solid border-accent" : ""
@@ -476,7 +485,7 @@ export default function SignupPage() {
                             </div>
                           </FormControl>
                           <FormMessage />
-                          <p className="text-xs text-muted-foreground">Only lowercase letters, numbers, and underscores allowed</p>
+                          <FormDescription className="text-xs">Only lowercase letters, numbers, and underscores allowed</FormDescription>
                         </FormItem>
                       )}
                     />

@@ -44,7 +44,18 @@ export const googleSignupCompletionSchema = z.object({
     .regex(/^[a-z0-9_]+$/, "Only lowercase letters, numbers, and underscores allowed"),
 });
 
+export const invitationServerJoinSchema = z.object({
+  invitationLink: z.string().min(1, "Invitation link is required"),
+});
+
+export const createServerSchema = z.object({
+  serverName: z.string().min(1, "Server name is required"),
+  serverImage: z.instanceof(File).optional(),
+});
+
 export type LoginFormValues = z.infer<typeof loginSchema>;
 export type SignupStep1Values = z.infer<typeof signupStep1Schema>;
 export type SignupStep2Values = z.infer<typeof signupStep2Schema>;
 export type GoogleSignupCompletionValues = z.infer<typeof googleSignupCompletionSchema>;
+export type InvitationServerJoinValues = z.infer<typeof invitationServerJoinSchema>;
+export type CreateServerValues = z.infer<typeof createServerSchema>;

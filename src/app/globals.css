@@ -6,6 +6,7 @@
 :root {
   --background: oklch(0.13 0 0);
   --foreground: oklch(0.95 0 0);
+  --main: oklch(0.1822 0 0);
   --card: oklch(0.17 0 0);
   --card-foreground: oklch(0.95 0 0);
   --popover: oklch(0.17 0 0);
@@ -42,6 +43,7 @@
 .dark {
   --background: oklch(0.13 0 0);
   --foreground: oklch(0.95 0 0);
+  --main: oklch(0.1822 0 0);
   --card: oklch(0.17 0 0);
   --card-foreground: oklch(0.95 0 0);
   --popover: oklch(0.17 0 0);
@@ -78,6 +80,7 @@
   --font-lato: "Lato", "Lato Fallback";
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-main: var(--main);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
