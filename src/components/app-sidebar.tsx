@@ -1,32 +1,21 @@
 "use client";
-import { Inbox, Calendar, Search, Settings, Home, ImagePlus } from "lucide-react";
 import {
   IconBrandSafari,
-  IconCamera,
-  IconChartBar,
-  IconDashboard,
-  IconDatabase,
-  IconFileAi,
-  IconFileDescription,
-  IconFileWord,
-  IconFolder,
-  IconHelp,
+  IconChevronDown,
   IconInnerShadowTop,
-  IconListDetails,
+  IconMailFilled,
+  IconPhotoPlus,
   IconPlus,
-  IconReport,
   IconSearch,
-  IconSettings,
-  IconUsers,
+  IconSelector,
+  IconUserFilled,
+  IconVolume,
   IconX,
 } from "@tabler/icons-react";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -52,23 +41,34 @@ import useUpload from "~/hooks/use-upload";
 import { ConfigPrefix } from "~/interfaces/app.interface";
 import { useCreateChannelMutation } from "~/redux/apis/channel.api";
 import { ChannelType } from "~/interfaces/channels.interface";
-import router from "next/router";
 import { toast } from "sonner";
 import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import { NestErrorResponse } from "~/interfaces/error.interface";
 import { Spinner } from "./ui/spinner";
 import { useRouter } from "next/navigation";
+import { ScrollArea } from "./ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
+import { ChevronsUpDown } from "lucide-react";
+import { Badge } from "./ui/badge";
+import { useSearchUsersMutation } from "~/redux/apis/user.api";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import AvailabilityIndicator from "./availability-indicator";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./ui/empty";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const currentUserInfo = useAppSelector(selectCurrentUserInfo);
   const currentChannels = useAppSelector(selectChannels);
+  const [createChannel, { isLoading: isCreatingChannel }] = useCreateChannelMutation();
+  const [searchUsers, { data: usersQuery }] = useSearchUsersMutation();
   const router = useRouter();
-  const [isUploadingLoading, setIsUploadingLoading] = useState(false);
+  const [openAddServerDialog, setOpenAddServerDialog] = useState<boolean>(false);
+  const [isUploadingLoading, setIsUploadingLoading] = useState<boolean>(false);
   const [step, setStep] = useState<number>(2);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
-  const [createChannel, { isLoading: isCreatingChannel }] = useCreateChannelMutation();
   const { startUpload } = useUpload(setIsUploadingLoading, ConfigPrefix.SINGLE_IMAGE_UPLOADER);
-
+  const [search, setSearch] = useState<string>("");
+  console.log(usersQuery);
   const invitationServerJoin = useForm<InvitationServerJoinValues>({
     resolver: zodResolver(invitationServerJoinSchema),
     defaultValues: {
@@ -86,6 +86,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const onInvitationServerJoinSubmit = async (data: InvitationServerJoinValues) => {
     console.log(data);
   };
+
   const onCreateServerSubmit = async (data: CreateServerValues) => {
     try {
       if (data.serverImage) {
@@ -101,7 +102,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               .unwrap()
               .then((res) => {
                 router.push(`/servers/${res.data.route}`);
-                // setOpenDialog(false)
+                setOpenAddServerDialog(false);
               });
           }
         });
@@ -116,7 +117,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           .unwrap()
           .then((res) => {
             router.push(`/servers/${res.data.route}`);
-            // setOpenDialog(false)
+            setOpenAddServerDialog(false);
           });
       }
     } catch (error) {
@@ -164,27 +165,40 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
         </SidebarHeader>
         <SidebarSeparator className="mx-auto" />
-        <SidebarContent className="mt-4 gap-1">
-          {currentChannels.map((channel) => (
-            <SidebarMenuItem key={channel._id} className="m-1">
-              <SidebarMenuButton
-                size="lg"
-                tooltip={{
-                  children: channel.groupOrServerName,
-                  hidden: false,
-                }}
-                className="data-[slot=sidebar-menu-button]:p-1.5!"
-              >
-                <Link href={`/server/${channel._id}`}>
-                  <Image src={channel.groupOrServerLogo || ""} alt={channel.groupOrServerName || ""} fill className="object-cover rounded-sm" />
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+        <SidebarContent className="flex-1 min-h-0 mt-4 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="flex flex-col gap-4">
+              {currentChannels
+                .filter((channel) => channel.type === ChannelType.Server)
+                .map((channel) => (
+                  <SidebarMenuItem key={channel._id}>
+                    <SidebarMenuButton
+                      asChild
+                      size="lg"
+                      tooltip={{
+                        children: channel.groupOrServerName,
+                        hidden: false,
+                      }}
+                      className="data-[slot=sidebar-menu-button]:p-0!"
+                    >
+                      <Link href={`/server/${channel._id}`} className="relative h-11 w-full">
+                        <Image
+                          src={channel.groupOrServerLogo || ""}
+                          alt={channel.groupOrServerName || ""}
+                          sizes="200px"
+                          fill
+                          className="object-cover rounded-sm"
+                        />
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+            </div>
+          </ScrollArea>
         </SidebarContent>
         <SidebarSeparator className="mx-auto" />
         <SidebarFooter>
-          <Dialog>
+          <Dialog open={openAddServerDialog} onOpenChange={setOpenAddServerDialog}>
             <DialogTrigger asChild>
               <SidebarMenuButton
                 isActive={true}
@@ -339,7 +353,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             {profileImageUrl ? (
                               <img src={profileImageUrl || "/placeholder.svg"} alt="Profile" className="w-full h-full object-cover" />
                             ) : (
-                              <ImagePlus className="h-8 w-8 text-muted-foreground group-hover:text-accent transition-colors" />
+                              <IconPhotoPlus stroke={2} className="h-8 w-8 text-muted-foreground group-hover:text-accent transition-colors" />
                             )}
                           </div>
                           <input
@@ -450,26 +464,177 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {/* second sidebar for channels and some buttons  */}
       <Sidebar collapsible="none" {...props}>
         <SidebarHeader>
-          <SidebarMenu>
+          <SidebarMenu className="gap-2">
+            <SidebarMenuItem>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:p-1.5!">
+                    <Button variant="secondary">Find or start a conversation</Button>
+                  </SidebarMenuButton>
+                </DialogTrigger>
+                <DialogContent showCloseButton={false} className="sm:max-w-[425px] max-w-2xl!">
+                  <DialogHeader>
+                    <DialogTitle>
+                      <Input
+                        onChange={async (e) => {
+                          const value = e.target.value;
+                          setSearch(value);
+                          const searchValue = value.startsWith("@") ? value.slice(1) : value;
+                          console.log(searchValue);
+                          if (searchValue.trim().length > 0) {
+                            await searchUsers(searchValue.trim());
+                          }
+                        }}
+                        value={search}
+                        type="text"
+                        className="h-14"
+                        placeholder="Where would you like to go?"
+                      />
+                    </DialogTitle>
+                    <DialogDescription />
+                  </DialogHeader>
+                  <ScrollArea className="h-60">
+                    {search.length > 0 ? (
+                      <div className="flex flex-col items-start gap-2">
+                        {search.startsWith("@") && <p className="text-xs uppercase font-semibold text-muted-foreground">searching all users</p>}
+                        {usersQuery && usersQuery?.length > 0 ? (
+                          usersQuery?.map((user) => (
+                            <Link href={`/user/${user._id}`} key={user._id} className="w-full">
+                              <Button variant="ghost" className="flex items-center justify-start gap-2 w-full">
+                                <AvailabilityIndicator size="sm" status={user.status.type} imageUrl={user.profilePicture} name={user.displayName} />
+                                <span className="flex items-center gap-2">{user.displayName}</span>
+                                <span className="text-xs text-muted-foreground">{user.username}</span>
+                              </Button>
+                            </Link>
+                          ))
+                        ) : (
+                          <Empty className="w-full flex items-center justify-center">
+                            <EmptyHeader>
+                              <EmptyMedia variant="default">
+                                <IconSearch className="size-12 text-muted-foreground" />
+                              </EmptyMedia>
+                              <EmptyTitle>No users found</EmptyTitle>
+                              <EmptyDescription>No users found. Please try again with a different search.</EmptyDescription>
+                            </EmptyHeader>
+                          </Empty>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-start gap-4">
+                        <Collapsible defaultOpen={true} className="flex flex-col gap-2 w-full items-start">
+                          <CollapsibleTrigger className="uppercase flex items-center gap-1 font-semibold text-xs text-muted-foreground text-start">
+                            previous channels <IconSelector stroke={2} className="size-4" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="flex flex-col gap-1 w-full items-start">
+                            {currentChannels
+                              .filter((channel) => channel.type === ChannelType.Server)
+                              .map((channel) => (
+                                <Link href={`/server/${channel._id}`} key={channel._id} className="w-full">
+                                  <Button variant="ghost" className="flex items-center justify-start gap-2 w-full ">
+                                    <IconVolume stroke={2} className="size-4 text-muted-foreground" />
+                                    <span className="flex items-center gap-2">
+                                      <Avatar className="size-5">
+                                        <AvatarImage src={channel.groupOrServerLogo || ""} />
+                                        <AvatarFallback>{channel.groupOrServerName?.charAt(0)}</AvatarFallback>
+                                      </Avatar>
+                                      {channel.groupOrServerName}
+                                    </span>
+                                  </Button>
+                                </Link>
+                              ))}
+                          </CollapsibleContent>
+                        </Collapsible>
+
+                        <Collapsible defaultOpen={true} className="flex flex-col gap-2 w-full items-start">
+                          <CollapsibleTrigger className="uppercase flex items-center gap-1 font-semibold text-xs text-muted-foreground text-start">
+                            channels <IconSelector stroke={2} className="size-4" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="flex flex-col gap-1 w-full items-start">
+                            {currentChannels
+                              .filter((channel) => channel.type !== ChannelType.Server)
+                              .map((channel) => (
+                                <Link href={`/server/${channel._id}`} key={channel._id} className="w-full">
+                                  <Button variant="ghost" className="flex items-center justify-start gap-2 w-full ">
+                                    <IconVolume stroke={2} className="size-4 text-muted-foreground" />
+                                    <span className="flex items-center gap-2">
+                                      <Avatar className="size-5">
+                                        <AvatarImage src={channel.groupOrServerLogo || ""} />
+                                        <AvatarFallback>{channel.groupOrServerName?.charAt(0)}</AvatarFallback>
+                                      </Avatar>
+                                      {channel.groupOrServerName}
+                                    </span>
+                                  </Button>
+                                </Link>
+                              ))}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </div>
+                    )}
+                  </ScrollArea>
+                  <Separator />
+                  <DialogFooter className="text-xs justify-start! items-center gap-1">
+                    <span className="font-bold text-accent uppercase">protip:</span>Start searches with
+                    <Badge className="rounded-sm p-0 text-xs" variant="default">
+                      @
+                    </Badge>
+                    to narrow results.
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </SidebarMenuItem>
+            <SidebarSeparator />
             <SidebarMenuItem>
               <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:p-1.5!">
-                <a href="#">
-                  <IconInnerShadowTop className="size-5!" />
-                  <span className="text-base font-semibold">Acme Inc.</span>
-                </a>
+                <Button variant="ghost" className="justify-start">
+                  <IconUserFilled />
+                  Friends
+                </Button>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:p-1.5!">
+                <Button variant="ghost" className="justify-start">
+                  <IconMailFilled />
+                  Messages Requests
+                </Button>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
-          {/* <NavMain items={data.navMain} />
-          <NavDocuments items={data.documents} />
-          <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
+          <SidebarSeparator />
+          <ScrollArea className="h-full pl-2">
+            <div className="flex items-center justify-between w-full">
+              <p className="text-xs font-semibold text-muted-foreground">Direct Messages</p>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon-sm">
+                    <IconPlus />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Create DM</TooltipContent>
+              </Tooltip>
+            </div>
+            {currentChannels
+              .filter((channel) => channel.type !== ChannelType.Server)
+              .map((channel) => (
+                <Link href={`/server/${channel._id}`} key={channel._id} className="w-full">
+                  <Button variant="ghost" className="flex items-center justify-start gap-2 w-full ">
+                    <IconVolume stroke={2} className="size-4 text-muted-foreground" />
+                    <span className="flex items-center gap-2">
+                      <Avatar className="size-5">
+                        <AvatarImage src={channel.groupOrServerLogo || ""} />
+                        <AvatarFallback>{channel.groupOrServerName?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      {channel.groupOrServerName}
+                    </span>
+                  </Button>
+                </Link>
+              ))}
+          </ScrollArea>
         </SidebarContent>
-        <SidebarFooter>{/* <NavUser user={data.user} /> */}</SidebarFooter>
+        <SidebarFooter></SidebarFooter>
       </Sidebar>
-
-      {/* user navigator */}
       <UserNavigator />
     </Sidebar>
   );

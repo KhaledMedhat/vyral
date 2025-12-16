@@ -1,8 +1,8 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { persistStore, persistReducer } from "redux-persist";
-import storage from "redux-persist/lib/storage"; // defaults to localStorage for web
+import createWebStorage from "redux-persist/lib/storage/createWebStorage";
 import { authApi } from "./apis/auth.api";
-// import { userRoute } from "../routes/userRoute";
+import { userApi } from "./apis/user.api";
 // import { channelRoute } from "../routes/channelRoute";
 import userReducer from "./slices/user/user-slice";
 import channelReducer from "./slices/channels/channels-slice";
@@ -10,6 +10,24 @@ import { channelApi } from "./apis/channel.api";
 // import appReducer from "../slices/app/appSlice";
 // import { messageRoute } from "../routes/messageRoute";
 // import callSlice from "../slices/call/callSlice";
+
+// Create a noop storage for SSR
+const createNoopStorage = () => {
+  return {
+    getItem(_key: string) {
+      return Promise.resolve(null);
+    },
+    setItem(_key: string, value: string) {
+      return Promise.resolve(value);
+    },
+    removeItem(_key: string) {
+      return Promise.resolve();
+    },
+  };
+};
+
+// Use localStorage on client, noop storage on server
+const storage = typeof window !== "undefined" ? createWebStorage("local") : createNoopStorage();
 
 const persistConfig = {
   key: "root",
@@ -49,7 +67,7 @@ export const store = configureStore({
   reducer: {
     // Add the RTK Query reducer to the store
     [authApi.reducerPath]: authApi.reducer,
-    // [userRoute.reducerPath]: userRoute.reducer,
+    [userApi.reducerPath]: userApi.reducer,
     [channelApi.reducerPath]: channelApi.reducer,
     // [messageRoute.reducerPath]: messageRoute.reducer,
     // call: persistedCallReducer,
@@ -87,7 +105,7 @@ export const store = configureStore({
       },
     }).concat(
       authApi.middleware,
-      //   userRoute.middleware,
+      userApi.middleware,
       channelApi.middleware
       //   messageRoute.middleware
     ), // Add the middleware for RTK Query

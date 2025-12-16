@@ -24,7 +24,7 @@ export default function ChannelsLayout({
       <SidebarProvider
         style={
           {
-            "--sidebar-width": "calc(var(--spacing) * 104)",
+            "--sidebar-width": "calc(var(--spacing) * 90)",
             "--header-height": "calc(var(--spacing) * 12)",
           } as React.CSSProperties
         }

@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { MessageCircle, Mail, Lock, ArrowRight, Eye, EyeOff, User, Check, ImagePlus, AtSign } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -21,7 +20,19 @@ import useUpload from "~/hooks/use-upload";
 import { toast } from "sonner";
 import { ConfigPrefix } from "~/interfaces/app.interface";
 import { Spinner } from "~/components/ui/spinner";
-import { IconX } from "@tabler/icons-react";
+import {
+  IconArrowRight,
+  IconAt,
+  IconCheck,
+  IconEyeFilled,
+  IconEyeOff,
+  IconLock,
+  IconMail,
+  IconMessageCircle,
+  IconPhotoPlus,
+  IconUser,
+  IconX,
+} from "@tabler/icons-react";
 
 export default function SignupPage() {
   const [step, setStep] = useState(1);
@@ -180,7 +191,7 @@ export default function SignupPage() {
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-2">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent">
-              <MessageCircle className="h-6 w-6 text-accent-foreground" />
+              <IconMessageCircle className="h-6 w-6 text-accent-foreground" />
             </div>
             <span className="text-2xl font-bold tracking-tight">PAO</span>
           </Link>
@@ -266,7 +277,7 @@ export default function SignupPage() {
                             <FormLabel>First name</FormLabel>
                             <FormControl>
                               <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <IconUser className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input type="text" placeholder="John" className="pl-10 h-11 rounded-lg" {...field} />
                               </div>
                             </FormControl>
@@ -282,7 +293,7 @@ export default function SignupPage() {
                             <FormLabel>Last name</FormLabel>
                             <FormControl>
                               <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <IconUser className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input type="text" placeholder="Doe" className="pl-10 h-11 rounded-lg" {...field} />
                               </div>
                             </FormControl>
@@ -299,7 +310,7 @@ export default function SignupPage() {
                           <FormLabel>Email address</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <IconMail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                               <Input type="email" placeholder="you@example.com" className="pl-10 h-11 rounded-lg" {...field} />
                             </div>
                           </FormControl>
@@ -316,7 +327,7 @@ export default function SignupPage() {
                           <FormLabel>Password</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <IconLock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                               <Input
                                 type={showPassword ? "text" : "password"}
                                 placeholder="Create a strong password"
@@ -328,7 +339,7 @@ export default function SignupPage() {
                                 onClick={() => setShowPassword(!showPassword)}
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                               >
-                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                {showPassword ? <IconEyeOff className="h-4 w-4" /> : <IconEyeFilled className="h-4 w-4" />}
                               </button>
                             </div>
                           </FormControl>
@@ -342,7 +353,7 @@ export default function SignupPage() {
                                       req.met ? "bg-accent text-accent-foreground" : "bg-muted"
                                     }`}
                                   >
-                                    {req.met && <Check className="h-2.5 w-2.5" />}
+                                    {req.met && <IconCheck className="h-2.5 w-2.5" />}
                                   </div>
                                   <span className={req.met ? "text-foreground" : "text-muted-foreground"}>{req.label}</span>
                                 </div>
@@ -361,7 +372,7 @@ export default function SignupPage() {
                           <FormLabel>Confirm password</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <IconLock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                               <Input
                                 type={showConfirmPassword ? "text" : "password"}
                                 placeholder="Confirm your password"
@@ -373,7 +384,7 @@ export default function SignupPage() {
                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                               >
-                                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                {showConfirmPassword ? <IconEyeOff className="h-4 w-4" /> : <IconEyeFilled className="h-4 w-4" />}
                               </button>
                             </div>
                           </FormControl>
@@ -406,7 +417,7 @@ export default function SignupPage() {
 
                     <Button type="submit" className="w-full rounded-full h-11 bg-accent text-accent-foreground hover:bg-accent/90">
                       Continue
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                      <IconArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </form>
                 </Form>
@@ -450,7 +461,7 @@ export default function SignupPage() {
                           {profileImageUrl ? (
                             <img src={profileImageUrl || "/placeholder.svg"} alt="Profile" className="w-full h-full object-cover" />
                           ) : (
-                            <ImagePlus className="h-8 w-8 text-muted-foreground group-hover:text-accent transition-colors" />
+                            <IconPhotoPlus stroke={2} className="h-8 w-8 text-muted-foreground group-hover:text-accent transition-colors" />
                           )}
                         </div>
                         <input
@@ -471,7 +482,7 @@ export default function SignupPage() {
                           <FormLabel>Username *</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <IconAt className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                               <Input
                                 type="text"
                                 placeholder="yourname"
