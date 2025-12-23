@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { IconAlertCircle, IconCircleCheck, IconClock } from "@tabler/icons-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 
 const services = [
@@ -35,7 +35,7 @@ export default function StatusPage() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">System Status</h1>
-          <p className="text-xl text-muted-foreground">Current status of PAO services</p>
+          <p className="text-xl text-muted-foreground">Current status of Vyral services</p>
         </div>
 
         {/* Overall Status */}
@@ -45,17 +45,17 @@ export default function StatusPage() {
               {allOperational ? (
                 <>
                   <div className="p-3 rounded-full bg-green-500/10">
-                    <CheckCircle2 className="h-8 w-8 text-green-500" />
+                    <IconCircleCheck className="h-8 w-8 text-green-500" />
                   </div>
                   <div>
                     <h2 className="text-xl font-semibold text-green-500">All Systems Operational</h2>
-                    <p className="text-muted-foreground">All PAO services are running smoothly</p>
+                    <p className="text-muted-foreground">All Vyral services are running smoothly</p>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="p-3 rounded-full bg-yellow-500/10">
-                    <AlertCircle className="h-8 w-8 text-yellow-500" />
+                    <IconAlertCircle className="h-8 w-8 text-yellow-500" />
                   </div>
                   <div>
                     <h2 className="text-xl font-semibold text-yellow-500">Partial Outage</h2>
@@ -77,7 +77,7 @@ export default function StatusPage() {
             {services.map((service) => (
               <div key={service.name} className="flex items-center justify-between py-3 border-b border-border last:border-0">
                 <div className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <IconCircleCheck className="h-5 w-5 text-green-500" />
                   <span className="font-medium">{service.name}</span>
                 </div>
                 <div className="flex items-center gap-4">
@@ -99,7 +99,7 @@ export default function StatusPage() {
             {incidents.map((incident, index) => (
               <div key={index} className="border-l-2 border-green-500 pl-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <IconClock className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">{incident.date}</span>
                   <span className="text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full">Resolved</span>
                 </div>

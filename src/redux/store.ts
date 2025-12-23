@@ -5,9 +5,9 @@ import { authApi } from "./apis/auth.api";
 import { userApi } from "./apis/user.api";
 // import { channelRoute } from "../routes/channelRoute";
 import userReducer from "./slices/user/user-slice";
-import channelReducer from "./slices/channels/channels-slice";
+// import channelReducer from "./slices/channels/channels-slice";
 import { channelApi } from "./apis/channel.api";
-// import appReducer from "../slices/app/appSlice";
+import appReducer from "./slices/app/app-slice";
 // import { messageRoute } from "../routes/messageRoute";
 // import callSlice from "../slices/call/callSlice";
 
@@ -52,16 +52,16 @@ const channelPersistConfig = {
 //   blacklist: ["callConsumers"],
 // };
 
-// const appPersistConfig = {
-//   ...persistConfig,
-//   key: "app",
-// };
+const appPersistConfig = {
+  ...persistConfig,
+  key: "app",
+};
 
 // Create persisted reducers
 const persistedUserReducer = persistReducer(userPersistConfig, userReducer);
-// const persistedAppReducer = persistReducer(appPersistConfig, appReducer);
+const persistedAppReducer = persistReducer(appPersistConfig, appReducer);
 // const persistedCallReducer = persistReducer(callPersistConfig, callSlice);
-const persistedChannelReducer = persistReducer(channelPersistConfig, channelReducer);
+// const persistedChannelReducer = persistReducer(channelPersistConfig, channelReducer);
 
 export const store = configureStore({
   reducer: {
@@ -72,8 +72,8 @@ export const store = configureStore({
     // [messageRoute.reducerPath]: messageRoute.reducer,
     // call: persistedCallReducer,
     user: persistedUserReducer,
-    // app: persistedAppReducer,
-    channels: persistedChannelReducer,
+    app: persistedAppReducer,
+    // channels: persistedChannelReducer,
   },
   devTools: process.env.NODE_ENV !== "production",
 

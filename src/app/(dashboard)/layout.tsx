@@ -1,6 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { AppSidebar } from "~/components/app-sidebar";
+import DashboardHeader from "~/components/dashboard-header";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar";
 import { Spinner } from "~/components/ui/spinner";
 import { useGetUserInfoQuery } from "~/redux/apis/auth.api";
@@ -30,7 +31,10 @@ export default function ChannelsLayout({
         }
       >
         <AppSidebar variant="inset" />
-        <SidebarInset>{children}</SidebarInset>
+        <SidebarInset>
+          <DashboardHeader />
+          {children}
+        </SidebarInset>
       </SidebarProvider>
     </>
   );

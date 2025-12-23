@@ -1,5 +1,6 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
-import { FriendInterface, ObsessionDuration, StatusDuration, StatusType, User, UserInitialState } from "~/interfaces/user.interface";
+import { Channel } from "~/interfaces/channels.interface";
+import { FriendInterface, FriendRequest, ObsessionDuration, StatusDuration, StatusType, User, UserInitialState } from "~/interfaces/user.interface";
 
 const initialState: UserInitialState = {
   isLoggedIn: false,
@@ -51,6 +52,9 @@ const initialState: UserInitialState = {
     createdAt: new Date(),
     updatedAt: new Date(),
   },
+  notifications: [],
+  friendRequests: [],
+  channelsInfo: [],
 };
 
 export const userSlice = createSlice({
@@ -66,8 +70,17 @@ export const userSlice = createSlice({
     setUserLoggingInStatus: (state, action: PayloadAction<boolean>) => {
       state.isLoggedIn = action.payload;
     },
+    setChannels: (state, action: PayloadAction<Channel[]>) => {
+      state.channelsInfo = action.payload;
+    },
+    // setNotifications: (state, action: PayloadAction<Notification[]>) => {
+    //   state.notifications = action.payload;
+    // },
+    setFriendRequests: (state, action: PayloadAction<FriendRequest[]>) => {
+      state.friendRequests = action.payload;
+    },
   },
 });
 
-export const { setUserLoggingInStatus, setUserInfo, setUpdatedFriend } = userSlice.actions;
+export const { setUserLoggingInStatus, setUserInfo, setUpdatedFriend, setChannels, setFriendRequests } = userSlice.actions;
 export default userSlice.reducer;

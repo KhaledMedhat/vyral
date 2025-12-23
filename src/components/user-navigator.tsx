@@ -1,6 +1,6 @@
 import { useAppSelector } from "~/redux/hooks";
 import { selectCurrentUserInfo } from "~/redux/slices/user/user-selector";
-import AvailabilityIndicator from "./availability-indicator";
+import ProfileAvailabilityIndicator from "./profile-availability-indicator";
 import { Button } from "./ui/button";
 import { IconChevronDown, IconHeadphonesFilled, IconMicrophone, IconSettings } from "@tabler/icons-react";
 import { ButtonGroup } from "./ui/button-group";
@@ -14,7 +14,8 @@ const UserNavigator = () => {
       <Popover>
         <PopoverTrigger asChild>
           <div className="flex items-center w-full group gap-2 hover:bg-input rounded-md p-2 cursor-pointer">
-            <AvailabilityIndicator
+            <ProfileAvailabilityIndicator
+              size="default"
               status={currentUserInfo.status.type}
               imageUrl={currentUserInfo.profilePicture}
               name={currentUserInfo.displayName}

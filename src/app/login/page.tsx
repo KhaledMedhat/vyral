@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { MessageCircle, Mail, Lock, ArrowRight, Eye, EyeOff, User } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -20,6 +19,8 @@ import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import { NestErrorResponse, USERNAME_CONFLICT } from "~/interfaces/error.interface";
 import { toast } from "sonner";
 import { Spinner } from "~/components/ui/spinner";
+import Image from "next/image";
+import { IconArrowRight, IconEyeFilled, IconEyeOff, IconLock, IconMail, IconUser } from "@tabler/icons-react";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -80,6 +81,7 @@ export default function LoginPage() {
         });
     } catch (error) {
       const errData = (error as FetchBaseQueryError).data as NestErrorResponse;
+      console.log(errData);
       if (errData.error === USERNAME_CONFLICT) {
         googleSignupCompletionForm.setError("username", {
           type: "manual",
@@ -104,10 +106,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent">
-                <MessageCircle className="h-6 w-6 text-accent-foreground" />
-              </div>
-              <span className="text-2xl font-bold tracking-tight">PAO</span>
+              <Image src="/vyral-full-logo.svg" alt="Vyral" width={200} height={200} className="object-cover h-20 w-90" />
             </Link>
           </div>
 
@@ -127,8 +126,8 @@ export default function LoginPage() {
                         <FormLabel>Username *</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input type="text" placeholder="yourname" className="pl-10 h-11 rounded-lg" {...field} />
+                            <IconUser className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input type="text" placeholder="yourname" className="pl-10 h-11" {...field} />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -149,7 +148,7 @@ export default function LoginPage() {
                     ) : (
                       <>
                         Sign In
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                        <IconArrowRight className="ml-2 h-4 w-4" />
                       </>
                     )}
                   </Button>
@@ -173,10 +172,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent">
-                <MessageCircle className="h-6 w-6 text-accent-foreground" />
-              </div>
-              <span className="text-2xl font-bold tracking-tight">PAO</span>
+              <Image src="/vyral-full-logo.svg" alt="Vyral" width={200} height={200} className="object-cover h-20 w-90" />
             </Link>
           </div>
 
@@ -227,8 +223,8 @@ export default function LoginPage() {
                         <FormLabel>Email address</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input type="email" placeholder="you@example.com" className="pl-10 h-11 rounded-lg" {...field} />
+                            <IconMail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input type="email" placeholder="you@example.com" className="pl-10 h-11" {...field} />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -249,11 +245,11 @@ export default function LoginPage() {
                         </div>
                         <FormControl>
                           <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <IconLock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                               type={showPassword ? "text" : "password"}
                               placeholder="Enter your password"
-                              className="pl-10 pr-10 h-11 rounded-lg"
+                              className="pl-10 pr-10 h-11"
                               {...field}
                             />
                             <button
@@ -261,7 +257,7 @@ export default function LoginPage() {
                               onClick={() => setShowPassword(!showPassword)}
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             >
-                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              {showPassword ? <IconEyeOff className="h-4 w-4" /> : <IconEyeFilled className="h-4 w-4" />}
                             </button>
                           </div>
                         </FormControl>
@@ -296,7 +292,7 @@ export default function LoginPage() {
                     ) : (
                       <>
                         Sign In
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                        <IconArrowRight className="ml-2 h-4 w-4" />
                       </>
                     )}
                   </Button>

@@ -1,7 +1,18 @@
 import Link from "next/link";
-import { MessageCircle, Zap, Shield, Users, Globe, Smartphone, ArrowRight, Check, Star } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import WorldMap from "~/components/ui/world-map";
+import Image from "next/image";
+import {
+  IconArrowRight,
+  IconBolt,
+  IconCheck,
+  IconDeviceMobile,
+  IconGlobe,
+  IconMessageCircle,
+  IconShield,
+  IconStar,
+  IconUsers,
+} from "@tabler/icons-react";
 
 export default function HomePage() {
   return (
@@ -11,7 +22,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-4 py-1.5 text-sm">
-              <Star className="h-4 w-4 text-accent" />
+              <IconStar className="h-4 w-4 text-accent" />
               <span>Trusted by 100,000+ users worldwide</span>
             </div>
             <h1 className="text-4xl font-bold tracking-tight md:text-6xl lg:text-7xl text-balance">
@@ -19,14 +30,14 @@ export default function HomePage() {
               <span className="block text-accent"> Connect & Chat</span>
             </h1>
             <p className="mt-6 text-lg text-muted-foreground md:text-xl text-pretty">
-              PAO brings people together with seamless, real-time messaging. Experience communication reimagined for the modern world with end-to-end
-              encryption and blazing fast delivery.
+              Vyral brings people together with seamless, real-time messaging. Experience communication reimagined for the modern world with
+              end-to-end encryption and blazing fast delivery.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link href="/login">
                 <Button size="lg" className="rounded-full px-8 gap-2">
                   Get Started
-                  <ArrowRight className="h-4 w-4" />
+                  <IconArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
               <Link href="/features">
@@ -37,15 +48,15 @@ export default function HomePage() {
             </div>
             <div className="mt-8 flex items-center justify-center gap-6 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-accent" />
+                <IconCheck className="h-4 w-4 text-accent" />
                 <span>Free forever</span>
               </div>
               <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-accent" />
+                <IconCheck className="h-4 w-4 text-accent" />
                 <span>No credit card</span>
               </div>
               <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-accent" />
+                <IconCheck className="h-4 w-4 text-accent" />
                 <span>Instant setup</span>
               </div>
             </div>
@@ -81,14 +92,14 @@ export default function HomePage() {
       <section className="py-20 md:py-32">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">What makes PAO special?</h2>
+            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">What makes Vyral special?</h2>
             <p className="mt-4 text-muted-foreground">Everything you need to build meaningful connections.</p>
           </div>
 
           <div className="mt-16 grid gap-6 md:grid-cols-3">
             <div className="rounded-2xl border border-border bg-card/50 p-8 transition-all hover:bg-secondary/50 hover:border-accent/30">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-                <Zap className="h-6 w-6 text-accent" />
+                <IconBolt className="h-6 w-6 text-accent" />
               </div>
               <h3 className="mt-6 text-xl font-semibold">Lightning Fast</h3>
               <p className="mt-2 text-muted-foreground">Real-time messaging with zero lag. Your messages arrive instantly, every time.</p>
@@ -96,7 +107,7 @@ export default function HomePage() {
 
             <div className="rounded-2xl border border-border bg-card/50 p-8 transition-all hover:bg-secondary/50 hover:border-accent/30">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-                <Shield className="h-6 w-6 text-accent" />
+                <IconShield className="h-6 w-6 text-accent" />
               </div>
               <h3 className="mt-6 text-xl font-semibold">Secure & Private</h3>
               <p className="mt-2 text-muted-foreground">End-to-end encryption ensures your conversations stay between you and your contacts.</p>
@@ -104,7 +115,7 @@ export default function HomePage() {
 
             <div className="rounded-2xl border border-border bg-card/50 p-8 transition-all hover:bg-secondary/50 hover:border-accent/30">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-                <Users className="h-6 w-6 text-accent" />
+                <IconUsers className="h-6 w-6 text-accent" />
               </div>
               <h3 className="mt-6 text-xl font-semibold">Group Chats</h3>
               <p className="mt-2 text-muted-foreground">Create groups for teams, friends, or communities. Stay connected with everyone.</p>
@@ -112,15 +123,15 @@ export default function HomePage() {
 
             <div className="rounded-2xl border border-border bg-card/50 p-8 transition-all hover:bg-secondary/50 hover:border-accent/30">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-                <Globe className="h-6 w-6 text-accent" />
+                <IconGlobe className="h-6 w-6 text-accent" />
               </div>
               <h3 className="mt-6 text-xl font-semibold">Cross-Platform</h3>
-              <p className="mt-2 text-muted-foreground">Access PAO from any device - web, mobile, or desktop. Seamlessly sync everywhere.</p>
+              <p className="mt-2 text-muted-foreground">Access Vyral from any device - web, mobile, or desktop. Seamlessly sync everywhere.</p>
             </div>
 
             <div className="rounded-2xl border border-border bg-card/50 p-8 transition-all hover:bg-secondary/50 hover:border-accent/30">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-                <Smartphone className="h-6 w-6 text-accent" />
+                <IconDeviceMobile className="h-6 w-6 text-accent" />
               </div>
               <h3 className="mt-6 text-xl font-semibold">Mobile First</h3>
               <p className="mt-2 text-muted-foreground">Optimized for mobile with native features and push notifications.</p>
@@ -128,7 +139,7 @@ export default function HomePage() {
 
             <div className="rounded-2xl border border-border bg-card/50 p-8 transition-all hover:bg-secondary/50 hover:border-accent/30">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-                <MessageCircle className="h-6 w-6 text-accent" />
+                <IconMessageCircle className="h-6 w-6 text-accent" />
               </div>
               <h3 className="mt-6 text-xl font-semibold">Rich Media</h3>
               <p className="mt-2 text-muted-foreground">Share images, videos, files, and voice messages with ease.</p>
@@ -139,7 +150,7 @@ export default function HomePage() {
             <Link href="/features">
               <Button variant="outline" className="rounded-full gap-2 bg-transparent">
                 View All Features
-                <ArrowRight className="h-4 w-4" />
+                <IconArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -193,19 +204,19 @@ export default function HomePage() {
       {/* CTA Section */}
       <section className="py-20 md:py-32">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
-          <div className="rounded-3xl border border-border bg-gradient-to-br from-card to-secondary/30 p-8 md:p-16 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-accent">
-              <MessageCircle className="h-8 w-8 text-accent-foreground" />
+          <div className="rounded-3xl border border-border bg-linear-to-br from-card to-secondary/30 p-8 md:p-16 text-center">
+            <div className="mx-auto flex items-center justify-center relative h-20 w-90">
+              <Image src="/vyral-full-logo.svg" alt="Vyral" fill className="object-cover" />
             </div>
             <h2 className="mt-8 text-3xl font-bold tracking-tight md:text-4xl">Ready to start chatting?</h2>
             <p className="mt-4 text-muted-foreground max-w-md mx-auto">
-              Join thousands of users already connecting on PAO. Free forever, no credit card required.
+              Join thousands of users already connecting on Vyral. Free forever, no credit card required.
             </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Link href="/login">
                 <Button size="lg" className="rounded-full px-8 gap-2">
                   Get Started Free
-                  <ArrowRight className="h-4 w-4" />
+                  <IconArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
               <Link href="/contact">

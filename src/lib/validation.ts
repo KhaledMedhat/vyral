@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+export const sendFriendRequestSchema = z.object({
+  username: z.string(),
+});
+
 export const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
@@ -53,6 +57,7 @@ export const createServerSchema = z.object({
   serverImage: z.instanceof(File).optional(),
 });
 
+export type SendFriendRequestValues = z.infer<typeof sendFriendRequestSchema>;
 export type LoginFormValues = z.infer<typeof loginSchema>;
 export type SignupStep1Values = z.infer<typeof signupStep1Schema>;
 export type SignupStep2Values = z.infer<typeof signupStep2Schema>;

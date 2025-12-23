@@ -2,11 +2,11 @@
 
 import type React from "react";
 import { useState } from "react";
-import { Mail, MessageSquare, MapPin, Clock, Phone, HelpCircle, FileText, Bug } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
+import { IconBug, IconClock, IconFileText, IconHelpCircle, IconMail, IconMapPin, IconMessage, IconPhone } from "@tabler/icons-react";
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
@@ -18,21 +18,21 @@ export default function ContactPage() {
 
   const supportOptions = [
     {
-      icon: HelpCircle,
+      icon: IconHelpCircle,
       title: "Help Center",
       description: "Browse our FAQ and guides",
       action: "Visit Help Center",
     },
     {
-      icon: FileText,
+      icon: IconFileText,
       title: "Documentation",
       description: "Technical docs and API reference",
       action: "View Docs",
     },
     {
-      icon: Bug,
+      icon: IconBug,
       title: "Report a Bug",
-      description: "Help us improve PAO",
+      description: "Help us improve Vyral",
       action: "Submit Report",
     },
   ];
@@ -50,15 +50,15 @@ export default function ContactPage() {
         <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <div className="flex flex-col items-center rounded-2xl border border-border bg-card/50 p-6 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-              <Mail className="h-6 w-6 text-accent" />
+              <IconMail className="h-6 w-6 text-accent" />
             </div>
             <h3 className="mt-4 font-semibold">Email</h3>
-            <p className="mt-1 text-sm text-muted-foreground">support@pao.chat</p>
+            <p className="mt-1 text-sm text-muted-foreground">support@Vyral.chat</p>
           </div>
 
           <div className="flex flex-col items-center rounded-2xl border border-border bg-card/50 p-6 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-              <MessageSquare className="h-6 w-6 text-accent" />
+              <IconMessage className="h-6 w-6 text-accent" />
             </div>
             <h3 className="mt-4 font-semibold">Live Chat</h3>
             <p className="mt-1 text-sm text-muted-foreground">Available 24/7 in-app</p>
@@ -66,7 +66,7 @@ export default function ContactPage() {
 
           <div className="flex flex-col items-center rounded-2xl border border-border bg-card/50 p-6 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-              <Clock className="h-6 w-6 text-accent" />
+              <IconClock className="h-6 w-6 text-accent" />
             </div>
             <h3 className="mt-4 font-semibold">Response Time</h3>
             <p className="mt-1 text-sm text-muted-foreground">Within 24 hours</p>
@@ -74,7 +74,7 @@ export default function ContactPage() {
 
           <div className="flex flex-col items-center rounded-2xl border border-border bg-card/50 p-6 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-              <MapPin className="h-6 w-6 text-accent" />
+              <IconMapPin className="h-6 w-6 text-accent" />
             </div>
             <h3 className="mt-4 font-semibold">Location</h3>
             <p className="mt-1 text-sm text-muted-foreground">San Francisco, CA</p>
@@ -111,7 +111,7 @@ export default function ContactPage() {
             {/* Office Hours */}
             <div className="rounded-xl border border-border bg-card/50 p-6 mt-8">
               <h3 className="font-semibold flex items-center gap-2">
-                <Phone className="h-4 w-4 text-accent" />
+                <IconPhone className="h-4 w-4 text-accent" />
                 Business Hours
               </h3>
               <div className="mt-4 space-y-2 text-sm text-muted-foreground">
@@ -130,7 +130,7 @@ export default function ContactPage() {
             {submitted ? (
               <div className="mt-8 flex flex-col items-center justify-center text-center py-12">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/20">
-                  <Mail className="h-8 w-8 text-accent" />
+                  <IconMail className="h-8 w-8 text-accent" />
                 </div>
                 <h3 className="mt-4 text-xl font-semibold">Message Sent!</h3>
                 <p className="mt-2 text-muted-foreground">We'll get back to you within 24 hours.</p>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MessageCircle } from "lucide-react";
+import Image from "next/image";
 
 export function Footer() {
   return (
@@ -8,10 +8,7 @@ export function Footer() {
         <div className="grid gap-8 md:grid-cols-4">
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <MessageCircle className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <span className="text-lg font-bold">PAO</span>
+              <Image src="/vyral-full-logo.svg" alt="Vyral" width={200} height={200} className="object-cover h-20 w-90" />
             </Link>
             <p className="text-sm text-muted-foreground">Connect and communicate seamlessly with the modern chat experience.</p>
           </div>
@@ -54,7 +51,7 @@ export function Footer() {
         </div>
 
         <div className="mt-8 border-t border-border pt-8 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} PAO. All rights reserved.
+          © {new Date().getFullYear()} Vyral. All rights reserved.
         </div>
       </div>
     </footer>

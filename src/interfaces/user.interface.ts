@@ -1,3 +1,5 @@
+import { Channel } from "./channels.interface";
+
 export type activityType = "" | "voice" | "streaming" | "video";
 export type FriendInterface = Omit<
   User,
@@ -31,6 +33,9 @@ export interface User {
 export interface UserInitialState {
   isLoggedIn: boolean;
   userInfo: User;
+  notifications: Notification[];
+  friendRequests: FriendRequest[];
+  channelsInfo: Channel[];
 }
 
 export interface CreateAccountRequest {

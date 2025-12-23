@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { getCookie } from "~/app/actions";
+import { Channel } from "~/interfaces/channels.interface";
 import { setUserLoggingInStatus } from "~/redux/slices/user/user-slice";
 import { store } from "~/redux/store";
 
@@ -45,4 +46,25 @@ export function getInitialsFallback(name?: string) {
     // If single name, return first letter or first two letters
     return parts[0].slice(0, 2).toUpperCase();
   }
+}
+
+/**
+ * Create a channel name from an array of display names
+ * Example: ["John", "Jane", "Jim"] -> "John's, Jane's, Jim's Group"
+ * @param membersDisplayNames - The array of display names to create the channel name from
+ * @returns The channel name
+ */
+export function createChannelName(membersDisplayNames: string[]) {
+  return [...membersDisplayNames.map((displayName) => displayName + "'s")].join(",") + " Group";
+}
+
+/**
+ * Get the other member of a direct message channel
+ * @param channel - The channel to get the other member of
+ * @param currentUserId - The current user's ID
+ * @returns The other member of the direct message channel
+ */
+export function getDirectMessageChannelOtherMember(channel: Channel, currentUserId: string) {
+  const otherMembers = channel.members.filter((member) => member.id._id !== currentUserId);
+  return otherMembers[0].id;
 }

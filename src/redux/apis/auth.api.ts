@@ -2,10 +2,17 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { Action, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "~/redux/store";
 import { HYDRATE } from "next-redux-wrapper";
-import { CreateAccountRequest, CreateAccountResponse, SignInRequest, StatusDuration, StatusType, User } from "~/interfaces/user.interface";
-import { setUserInfo, setUserLoggingInStatus } from "~/redux/slices/user/user-slice";
+import {
+  CreateAccountRequest,
+  CreateAccountResponse,
+  FriendRequest,
+  SignInRequest,
+  StatusDuration,
+  StatusType,
+  User,
+} from "~/interfaces/user.interface";
+import { setChannels, setFriendRequests, setUserInfo, setUserLoggingInStatus } from "~/redux/slices/user/user-slice";
 import { Channel } from "~/interfaces/channels.interface";
-import { setChannels } from "../slices/channels/channels-slice";
 
 function isHydrateAction(action: Action): action is PayloadAction<RootState> {
   return action.type === HYDRATE;
@@ -63,7 +70,7 @@ export const authApi = createApi({
         body: data,
       }),
     }),
-    getUserInfo: builder.query<{ user: User; channels: Channel[] }, void>({
+    getUserInfo: builder.query<{ user: User; channels: Channel[]; notifications: Notification[]; friendRequests: FriendRequest[] }, void>({
       query: () => ({
         url: "/auth/get-profile",
       }),
@@ -73,6 +80,8 @@ export const authApi = createApi({
           dispatch(setUserLoggingInStatus(true));
           dispatch(setUserInfo(data.user));
           dispatch(setChannels(data.channels));
+          // dispatch(setNotifications(data.notifications));
+          dispatch(setFriendRequests(data.friendRequests));
         } catch {
           dispatch(setUserLoggingInStatus(false));
         }

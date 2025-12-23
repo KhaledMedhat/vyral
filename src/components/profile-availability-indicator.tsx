@@ -1,8 +1,8 @@
 import { StatusType } from "~/interfaces/user.interface";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { getInitialsFallback } from "~/lib/utils";
-import { Minus, Moon } from "lucide-react";
 import { cva } from "class-variance-authority";
+import { IconMinus, IconMoon } from "@tabler/icons-react";
 
 const avatarVariants = cva("relative inline-block", {
   variants: {
@@ -20,7 +20,7 @@ const avatarVariants = cva("relative inline-block", {
 const indicatorVariants = cva("absolute bottom-0 -right-1 rounded-full border-2 border-background flex items-center justify-center", {
   variants: {
     size: {
-      default: "size-5",
+      default: "size-4.5",
       sm: "size-4",
       lg: "size-6",
     },
@@ -52,13 +52,13 @@ function StatusBadge({ status, size }: { status: StatusType; size: "default" | "
     case StatusType.DoNotDisturb:
       return (
         <span className={indicatorVariants({ size, className: "bg-red-500" })}>
-          <Minus className={statusBadgeVariants({ size, className: "text-background" })} strokeWidth={4} />
+          <IconMinus className={statusBadgeVariants({ size, className: "text-background" })} strokeWidth={4} />
         </span>
       );
     case StatusType.Idle:
       return (
         <span className={indicatorVariants({ size, className: "bg-background" })}>
-          <Moon className={statusBadgeVariants({ size, className: "text-background fill-yellow-500" })} />
+          <IconMoon className={statusBadgeVariants({ size, className: "text-background fill-yellow-500" })} />
         </span>
       );
     default:
@@ -66,7 +66,7 @@ function StatusBadge({ status, size }: { status: StatusType; size: "default" | "
   }
 }
 
-const AvailabilityIndicator: React.FC<{ status: StatusType; imageUrl: string; name: string; size: "default" | "sm" | "lg" }> = ({
+const ProfileAvailabilityIndicator: React.FC<{ status?: StatusType; imageUrl: string; name: string; size: "default" | "sm" | "lg" }> = ({
   status,
   imageUrl,
   name,
@@ -78,9 +78,9 @@ const AvailabilityIndicator: React.FC<{ status: StatusType; imageUrl: string; na
         <AvatarImage src={imageUrl} alt={name} />
         <AvatarFallback>{getInitialsFallback(name)}</AvatarFallback>
       </Avatar>
-      <StatusBadge status={status} size={size} />
+      {status && <StatusBadge status={status} size={size} />}
     </div>
   );
 };
 
-export default AvailabilityIndicator;
+export default ProfileAvailabilityIndicator;

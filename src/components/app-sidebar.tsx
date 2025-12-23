@@ -1,8 +1,6 @@
 "use client";
 import {
   IconBrandSafari,
-  IconChevronDown,
-  IconInnerShadowTop,
   IconMailFilled,
   IconPhotoPlus,
   IconPlus,
@@ -24,11 +22,10 @@ import {
 } from "./ui/sidebar";
 import UserNavigator from "./user-navigator";
 import { selectCurrentUserInfo } from "~/redux/slices/user/user-selector";
-import { useAppSelector } from "~/redux/hooks";
+import { useAppDispatch, useAppSelector } from "~/redux/hooks";
 import Link from "next/link";
-import { selectChannels } from "~/redux/slices/channels/channels-seletor";
 import Image from "next/image";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
 import { useState } from "react";
@@ -38,7 +35,7 @@ import { createServerSchema, CreateServerValues, invitationServerJoinSchema, Inv
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
 import { Input } from "./ui/input";
 import useUpload from "~/hooks/use-upload";
-import { ConfigPrefix } from "~/interfaces/app.interface";
+import { ActiveUI, ConfigPrefix, FriendsSelectorView } from "~/interfaces/app.interface";
 import { useCreateChannelMutation } from "~/redux/apis/channel.api";
 import { ChannelType } from "~/interfaces/channels.interface";
 import { toast } from "sonner";
@@ -49,26 +46,31 @@ import { useRouter } from "next/navigation";
 import { ScrollArea } from "./ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
-import { ChevronsUpDown } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { useSearchUsersMutation } from "~/redux/apis/user.api";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-import AvailabilityIndicator from "./availability-indicator";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./ui/empty";
+import ProfileAvailabilityIndicator from "./profile-availability-indicator";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./ui/empty";
+import FriendsSelector from "./friends-selector";
+import { setActiveUI } from "~/redux/slices/app/app-slice";
+import { selectChannels, selectSidebarOpen } from "~/redux/slices/app/app-selector";
+import { getDirectMessageChannelOtherMember } from "~/lib/utils";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
   const currentUserInfo = useAppSelector(selectCurrentUserInfo);
   const currentChannels = useAppSelector(selectChannels);
+  console.log(currentChannels);
+  const sidebarOpen = useAppSelector(selectSidebarOpen);
   const [createChannel, { isLoading: isCreatingChannel }] = useCreateChannelMutation();
   const [searchUsers, { data: usersQuery }] = useSearchUsersMutation();
-  const router = useRouter();
   const [openAddServerDialog, setOpenAddServerDialog] = useState<boolean>(false);
   const [isUploadingLoading, setIsUploadingLoading] = useState<boolean>(false);
   const [step, setStep] = useState<number>(2);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const { startUpload } = useUpload(setIsUploadingLoading, ConfigPrefix.SINGLE_IMAGE_UPLOADER);
   const [search, setSearch] = useState<string>("");
-  console.log(usersQuery);
+
   const invitationServerJoin = useForm<InvitationServerJoinValues>({
     resolver: zodResolver(invitationServerJoinSchema),
     defaultValues: {
@@ -141,11 +143,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   };
   return (
-    <Sidebar collapsible="offcanvas" className="overflow-hidden relative *:data-[sidebar=sidebar]:flex-row" {...props}>
+    <Sidebar collapsible="icon" className="overflow-hidden relative *:data-[sidebar=sidebar]:flex-row" {...props}>
       {/* first sidebar for servers and some buttons  */}
       <Sidebar
         collapsible="none"
-        className="max-h-[92vh]"
+        className={`max-h-[92vh] ${!sidebarOpen && "w-full justify-center items-center"}`}
         {...props}
         style={
           {
@@ -153,18 +155,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           } as React.CSSProperties
         }
       >
-        <SidebarHeader>
+        <SidebarHeader className="p-0">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:p-1.5!">
-                <Link href={`/channels/${currentUserInfo.channelSlug}`}>
-                  <IconInnerShadowTop className="size-5!" />
-                </Link>
+              <SidebarMenuButton
+                onClick={() => router.push(`/channels/${currentUserInfo.channelSlug}`)}
+                isActive={true}
+                size="lg"
+                className="relative items-center"
+              >
+                <Image src="/vyral-short-logo.svg" alt="PÀO" fill className="object-cover" />
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarSeparator className="mx-auto" />
+        <SidebarSeparator className="mx-auto mt-1" />
         <SidebarContent className="flex-1 min-h-0 mt-4 overflow-hidden">
           <ScrollArea className="h-full">
             <div className="flex flex-col gap-4">
@@ -197,7 +202,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </ScrollArea>
         </SidebarContent>
         <SidebarSeparator className="mx-auto" />
-        <SidebarFooter>
+        <SidebarFooter className="p-1 mt-1">
           <Dialog open={openAddServerDialog} onOpenChange={setOpenAddServerDialog}>
             <DialogTrigger asChild>
               <SidebarMenuButton
@@ -206,10 +211,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   children: "Add Server",
                   hidden: false,
                 }}
-                asChild
-                className="data-[slot=sidebar-menu-button]:p-1.5!"
+                size="lg"
+                className="data-[slot=sidebar-menu-button]:p-1.5! justify-center"
               >
-                <IconPlus stroke={2} />
+                <IconPlus stroke={2} className="size-5!" />
               </SidebarMenuButton>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] gap-10">
@@ -453,16 +458,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               children: "Discover",
               hidden: false,
             }}
-            asChild
-            className="data-[slot=sidebar-menu-button]:p-1.5! "
+            className="data-[slot=sidebar-menu-button]:p-1.5! justify-center"
+            size="lg"
           >
-            <IconBrandSafari stroke={2} />
+            <IconBrandSafari stroke={2} className="size-5!" />
           </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>
-      <SidebarSeparator orientation="vertical" />
+      {sidebarOpen && <SidebarSeparator orientation="vertical" />}
       {/* second sidebar for channels and some buttons  */}
-      <Sidebar collapsible="none" {...props}>
+      <Sidebar collapsible={sidebarOpen ? "none" : "offcanvas"} {...props}>
         <SidebarHeader>
           <SidebarMenu className="gap-2">
             <SidebarMenuItem>
@@ -501,7 +506,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           usersQuery?.map((user) => (
                             <Link href={`/user/${user._id}`} key={user._id} className="w-full">
                               <Button variant="ghost" className="flex items-center justify-start gap-2 w-full">
-                                <AvailabilityIndicator size="sm" status={user.status.type} imageUrl={user.profilePicture} name={user.displayName} />
+                                <ProfileAvailabilityIndicator
+                                  size="sm"
+                                  status={user.status.type}
+                                  imageUrl={user.profilePicture}
+                                  name={user.displayName}
+                                />
                                 <span className="flex items-center gap-2">{user.displayName}</span>
                                 <span className="text-xs text-muted-foreground">{user.username}</span>
                               </Button>
@@ -585,16 +595,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarSeparator />
             <SidebarMenuItem>
               <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:p-1.5!">
-                <Button variant="ghost" className="justify-start">
-                  <IconUserFilled />
+                <Button variant="ghost" className="justify-start h-9" onClick={() => dispatch(setActiveUI(ActiveUI.FRIENDS_LIST))}>
+                  <IconUserFilled className="size-5!" />
                   Friends
                 </Button>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:p-1.5!">
-                <Button variant="ghost" className="justify-start">
-                  <IconMailFilled />
+                <Button variant="ghost" className="justify-start h-9" onClick={() => dispatch(setActiveUI(ActiveUI.MESSAGE_REQUESTS))}>
+                  <IconMailFilled className="size-5!" />
                   Messages Requests
                 </Button>
               </SidebarMenuButton>
@@ -603,31 +613,47 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarSeparator />
+          <div className="flex items-center justify-between w-full px-2">
+            <p className="text-sm font-semibold text-muted-foreground">Direct Messages</p>
+            <FriendsSelector friends={currentUserInfo.friends} currentUser={currentUserInfo} view={FriendsSelectorView.SIDEBAR} />
+          </div>
           <ScrollArea className="h-full pl-2">
-            <div className="flex items-center justify-between w-full">
-              <p className="text-xs font-semibold text-muted-foreground">Direct Messages</p>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon-sm">
-                    <IconPlus />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Create DM</TooltipContent>
-              </Tooltip>
-            </div>
             {currentChannels
               .filter((channel) => channel.type !== ChannelType.Server)
               .map((channel) => (
-                <Link href={`/server/${channel._id}`} key={channel._id} className="w-full">
+                <Link href={`/${channel.type}/${channel._id}`} key={channel._id} className="w-full">
                   <Button variant="ghost" className="flex items-center justify-start gap-2 w-full ">
-                    <IconVolume stroke={2} className="size-4 text-muted-foreground" />
-                    <span className="flex items-center gap-2">
-                      <Avatar className="size-5">
-                        <AvatarImage src={channel.groupOrServerLogo || ""} />
-                        <AvatarFallback>{channel.groupOrServerName?.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      {channel.groupOrServerName}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <ProfileAvailabilityIndicator
+                        status={
+                          channel.type === ChannelType.Direct
+                            ? getDirectMessageChannelOtherMember(channel, currentUserInfo._id).status.type
+                            : undefined
+                        }
+                        imageUrl={
+                          channel.type === ChannelType.Direct
+                            ? getDirectMessageChannelOtherMember(channel, currentUserInfo._id).profilePicture || ""
+                            : channel.groupOrServerLogo || ""
+                        }
+                        name={
+                          channel.type === ChannelType.Direct
+                            ? getDirectMessageChannelOtherMember(channel, currentUserInfo._id).displayName
+                            : channel.groupOrServerName || ""
+                        }
+                        size="default"
+                      />
+                      <div className="flex flex-col itmes-start">
+                        <div className="flex items-center gap-1">
+                          <p className="font-semibold text-sm">
+                            {channel.type === ChannelType.Direct
+                              ? getDirectMessageChannelOtherMember(channel, currentUserInfo._id).displayName
+                              : channel.groupOrServerName || ""}
+                          </p>
+                          {/* <p className="text-xs text-muted-foreground group-hover/friend:block hidden">{friend.username}</p> */}
+                        </div>
+                        {/* <p className="text-xs font-semibold text-muted-foreground">{friend.status.type}</p> */}
+                      </div>
+                    </div>
                   </Button>
                 </Link>
               ))}

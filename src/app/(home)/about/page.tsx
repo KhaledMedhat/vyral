@@ -1,9 +1,6 @@
+import { IconArrowRight, IconHeart, IconRocket, IconShield, IconTarget } from "@tabler/icons-react";
 import Link from "next/link";
-import { Target, Heart, Rocket, Shield, ArrowRight } from "lucide-react";
-import { AnimatedBackground } from "~/components/ui/animated-background";
-import { Navbar } from "~/components/navbar";
 import { Button } from "~/components/ui/button";
-import { Footer } from "~/components/footer";
 
 export default function AboutPage() {
   const team = [
@@ -14,9 +11,9 @@ export default function AboutPage() {
   ];
 
   const milestones = [
-    { year: "2021", title: "Founded", description: "PAO was born from a vision to revolutionize messaging" },
+    { year: "2021", title: "Founded", description: "Vyral was born from a vision to revolutionize messaging" },
     { year: "2022", title: "1M Users", description: "Reached our first million users worldwide" },
-    { year: "2023", title: "Enterprise Launch", description: "Launched PAO for Business with advanced features" },
+    { year: "2023", title: "Enterprise Launch", description: "Launched Vyral for Business with advanced features" },
     { year: "2024", title: "100M Messages", description: "Over 100 million messages sent daily" },
   ];
 
@@ -25,7 +22,7 @@ export default function AboutPage() {
       <div className="mx-auto max-w-7xl px-4 md:px-6">
         {/* Header */}
         <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-4xl font-bold tracking-tight md:text-5xl">About PAO</h1>
+          <h1 className="text-4xl font-bold tracking-tight md:text-5xl">About Vyral</h1>
           <p className="mt-6 text-lg text-muted-foreground">Building the future of communication, one message at a time.</p>
         </div>
 
@@ -34,7 +31,7 @@ export default function AboutPage() {
           <div>
             <h2 className="text-3xl font-bold">Our Mission</h2>
             <p className="mt-4 text-muted-foreground leading-relaxed">
-              PAO was created with a simple goal: to make communication effortless and enjoyable. We believe that staying connected should be
+              Vyral was created with a simple goal: to make communication effortless and enjoyable. We believe that staying connected should be
               seamless, secure, and accessible to everyone, regardless of where they are in the world.
             </p>
             <p className="mt-4 text-muted-foreground leading-relaxed">
@@ -65,32 +62,32 @@ export default function AboutPage() {
         {/* Values */}
         <div className="mt-24">
           <h2 className="text-3xl font-bold text-center">Our Values</h2>
-          <p className="mt-4 text-muted-foreground text-center max-w-2xl mx-auto">These core principles guide everything we do at PAO.</p>
+          <p className="mt-4 text-muted-foreground text-center max-w-2xl mx-auto">These core principles guide everything we do at Vyral.</p>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-border bg-card/50 p-6">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10">
-                <Shield className="h-5 w-5 text-accent" />
+                <IconShield className="h-5 w-5 text-accent" />
               </div>
               <h3 className="mt-4 font-semibold">Privacy First</h3>
               <p className="mt-2 text-sm text-muted-foreground">Your data belongs to you. We never sell or share your information.</p>
             </div>
             <div className="rounded-2xl border border-border bg-card/50 p-6">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10">
-                <Target className="h-5 w-5 text-accent" />
+                <IconTarget className="h-5 w-5 text-accent" />
               </div>
               <h3 className="mt-4 font-semibold">Simplicity</h3>
               <p className="mt-2 text-sm text-muted-foreground">Powerful features, intuitive design. No learning curve required.</p>
             </div>
             <div className="rounded-2xl border border-border bg-card/50 p-6">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10">
-                <Heart className="h-5 w-5 text-accent" />
+                <IconHeart className="h-5 w-5 text-accent" />
               </div>
               <h3 className="mt-4 font-semibold">Reliability</h3>
               <p className="mt-2 text-sm text-muted-foreground">99.9% uptime guarantee. Your messages are delivered, always.</p>
             </div>
             <div className="rounded-2xl border border-border bg-card/50 p-6">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10">
-                <Rocket className="h-5 w-5 text-accent" />
+                <IconRocket className="h-5 w-5 text-accent" />
               </div>
               <h3 className="mt-4 font-semibold">Innovation</h3>
               <p className="mt-2 text-sm text-muted-foreground">Constantly evolving to bring you the best chat experience.</p>
@@ -118,7 +115,7 @@ export default function AboutPage() {
         {/* Team */}
         <div className="mt-24">
           <h2 className="text-3xl font-bold text-center">Meet the Team</h2>
-          <p className="mt-4 text-muted-foreground text-center max-w-2xl mx-auto">The passionate people behind PAO.</p>
+          <p className="mt-4 text-muted-foreground text-center max-w-2xl mx-auto">The passionate people behind Vyral.</p>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {team.map((member) => (
               <div key={member.name} className="rounded-2xl border border-border bg-card/50 p-6 text-center">
@@ -135,12 +132,12 @@ export default function AboutPage() {
         {/* CTA */}
         <div className="mt-24 text-center">
           <h2 className="text-2xl font-bold md:text-3xl">Join us on our mission</h2>
-          <p className="mt-4 text-muted-foreground">Start using PAO today and be part of the future of communication.</p>
+          <p className="mt-4 text-muted-foreground">Start using Vyral today and be part of the future of communication.</p>
           <div className="mt-8">
             <Link href="/login">
               <Button size="lg" className="rounded-full px-8 gap-2">
                 Get Started Free
-                <ArrowRight className="h-4 w-4" />
+                <IconArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>

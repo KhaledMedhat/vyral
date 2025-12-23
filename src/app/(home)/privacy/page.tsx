@@ -8,7 +8,7 @@ export default function PrivacyPage() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">Introduction</h2>
           <p className="text-muted-foreground leading-relaxed">
-            At PAO, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when
+            At Vyral, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when
             you use our messaging application.
           </p>
         </section>
@@ -27,7 +27,7 @@ export default function PrivacyPage() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">End-to-End Encryption</h2>
           <p className="text-muted-foreground leading-relaxed">
-            All messages sent through PAO are protected by end-to-end encryption. This means only you and the person you're communicating with can
+            All messages sent through Vyral are protected by end-to-end encryption. This means only you and the person you're communicating with can
             read your messages. We cannot read your messages, and neither can anyone else.
           </p>
         </section>
@@ -55,8 +55,8 @@ export default function PrivacyPage() {
           <h2 className="text-2xl font-semibold mb-4">Contact Us</h2>
           <p className="text-muted-foreground leading-relaxed">
             If you have any questions about this Privacy Policy, please contact us at{" "}
-            <a href="mailto:privacy@pao.chat" className="text-accent hover:underline">
-              privacy@pao.chat
+            <a href="mailto:privacy@Vyral.chat" className="text-accent hover:underline">
+              privacy@Vyral.chat
             </a>
           </p>
         </section>

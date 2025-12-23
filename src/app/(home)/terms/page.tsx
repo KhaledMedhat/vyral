@@ -8,7 +8,7 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">1. Acceptance of Terms</h2>
           <p className="text-muted-foreground leading-relaxed">
-            By accessing or using PAO, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our
+            By accessing or using Vyral, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our
             service.
           </p>
         </section>
@@ -16,14 +16,14 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">2. Description of Service</h2>
           <p className="text-muted-foreground leading-relaxed">
-            PAO provides a messaging platform that allows users to send text messages, images, files, and make voice and video calls. Our service is
+            Vyral provides a messaging platform that allows users to send text messages, images, files, and make voice and video calls. Our service is
             available on web, iOS, and Android platforms.
           </p>
         </section>
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">3. User Accounts</h2>
-          <p className="text-muted-foreground leading-relaxed mb-4">To use PAO, you must create an account. You are responsible for:</p>
+          <p className="text-muted-foreground leading-relaxed mb-4">To use Vyral, you must create an account. You are responsible for:</p>
           <ul className="list-disc list-inside text-muted-foreground space-y-2">
             <li>Maintaining the confidentiality of your account credentials</li>
             <li>All activities that occur under your account</li>
@@ -47,7 +47,7 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">5. Intellectual Property</h2>
           <p className="text-muted-foreground leading-relaxed">
-            The PAO service, including all content, features, and functionality, is owned by PAO and protected by copyright, trademark, and other
+            The Vyral service, including all content, features, and functionality, is owned by Vyral and protected by copyright, trademark, and other
             intellectual property laws.
           </p>
         </section>
@@ -64,8 +64,8 @@ export default function TermsPage() {
           <h2 className="text-2xl font-semibold mb-4">7. Contact</h2>
           <p className="text-muted-foreground leading-relaxed">
             For questions about these Terms, please contact us at{" "}
-            <a href="mailto:legal@pao.chat" className="text-accent hover:underline">
-              legal@pao.chat
+            <a href="mailto:legal@Vyral.chat" className="text-accent hover:underline">
+              legal@Vyral.chat
             </a>
           </p>
         </section>

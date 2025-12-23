@@ -1,7 +1,5 @@
 "use client";
-
 import type React from "react";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -28,11 +26,11 @@ import {
   IconEyeOff,
   IconLock,
   IconMail,
-  IconMessageCircle,
   IconPhotoPlus,
   IconUser,
   IconX,
 } from "@tabler/icons-react";
+import Image from "next/image";
 
 export default function SignupPage() {
   const [step, setStep] = useState(1);
@@ -190,10 +188,7 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent">
-              <IconMessageCircle className="h-6 w-6 text-accent-foreground" />
-            </div>
-            <span className="text-2xl font-bold tracking-tight">PAO</span>
+            <Image src="/vyral-full-logo.svg" alt="Vyral" width={200} height={200} className="object-cover h-20 w-90" />
           </Link>
         </div>
 
@@ -278,7 +273,7 @@ export default function SignupPage() {
                             <FormControl>
                               <div className="relative">
                                 <IconUser className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input type="text" placeholder="John" className="pl-10 h-11 rounded-lg" {...field} />
+                                <Input type="text" placeholder="John" className="pl-10 h-11" {...field} />
                               </div>
                             </FormControl>
                             <FormMessage />
@@ -294,7 +289,7 @@ export default function SignupPage() {
                             <FormControl>
                               <div className="relative">
                                 <IconUser className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input type="text" placeholder="Doe" className="pl-10 h-11 rounded-lg" {...field} />
+                                <Input type="text" placeholder="Doe" className="pl-10 h-11" {...field} />
                               </div>
                             </FormControl>
                             <FormMessage />
@@ -311,7 +306,7 @@ export default function SignupPage() {
                           <FormControl>
                             <div className="relative">
                               <IconMail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input type="email" placeholder="you@example.com" className="pl-10 h-11 rounded-lg" {...field} />
+                              <Input type="email" placeholder="you@example.com" className="pl-10 h-11" {...field} />
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -331,7 +326,7 @@ export default function SignupPage() {
                               <Input
                                 type={showPassword ? "text" : "password"}
                                 placeholder="Create a strong password"
-                                className="pl-10 pr-10 h-11 rounded-lg"
+                                className="pl-10 pr-10 h-11"
                                 {...field}
                               />
                               <button
@@ -376,7 +371,7 @@ export default function SignupPage() {
                               <Input
                                 type={showConfirmPassword ? "text" : "password"}
                                 placeholder="Confirm your password"
-                                className="pl-10 pr-10 h-11 rounded-lg"
+                                className="pl-10 pr-10 h-11"
                                 {...field}
                               />
                               <button
@@ -486,7 +481,7 @@ export default function SignupPage() {
                               <Input
                                 type="text"
                                 placeholder="yourname"
-                                className="pl-10 h-11 rounded-lg"
+                                className="pl-10 h-11"
                                 {...field}
                                 onChange={(e) => {
                                   const value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");

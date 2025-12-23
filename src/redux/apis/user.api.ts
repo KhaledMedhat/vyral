@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { CreateChannelBody, CreateChannelResponse } from "~/interfaces/channels.interface";
-import { User } from "~/interfaces/user.interface";
+import { SendFriendRequest, User } from "~/interfaces/user.interface";
 
 export const userApi = createApi({
   reducerPath: "userApi",
@@ -18,7 +18,39 @@ export const userApi = createApi({
         params: { query },
       }),
     }),
+    sendFriendRequest: builder.mutation<void, SendFriendRequest>({
+      query: (data) => ({
+        url: "/user/send-friend-request",
+        method: "POST",
+        body: data,
+      }),
+    }),
+    acceptFriendRequest: builder.mutation<void, { requestId: string }>({
+      query: (args) => ({
+        url: `/user/friend-request-accept/${args.requestId}`,
+        method: "PATCH",
+      }),
+    }),
+
+    rejectFriendRequest: builder.mutation<void, { requestId: string }>({
+      query: (args) => ({
+        url: `/user/friend-request-reject/${args.requestId}`,
+        method: "DELETE",
+      }),
+    }),
+    removeFriend: builder.mutation<void, string>({
+      query: (friendId) => ({
+        url: `/user/remove-friend/${friendId}`,
+        method: "DELETE",
+      }),
+    }),
   }),
 });
 
-export const { useSearchUsersMutation } = userApi;
+export const {
+  useSearchUsersMutation,
+  useRemoveFriendMutation,
+  useSendFriendRequestMutation,
+  useAcceptFriendRequestMutation,
+  useRejectFriendRequestMutation,
+} = userApi;
