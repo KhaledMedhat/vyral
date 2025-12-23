@@ -52,25 +52,39 @@ import ProfileAvailabilityIndicator from "./profile-availability-indicator";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./ui/empty";
 import FriendsSelector from "./friends-selector";
 import { setActiveUI } from "~/redux/slices/app/app-slice";
-import { selectChannels, selectSidebarOpen } from "~/redux/slices/app/app-selector";
+import { selectActiveUI, selectChannels, selectSidebarOpen } from "~/redux/slices/app/app-selector";
 import { getDirectMessageChannelOtherMember } from "~/lib/utils";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const currentUserInfo = useAppSelector(selectCurrentUserInfo);
-  const currentChannels = useAppSelector(selectChannels);
-  console.log(currentChannels);
-  const sidebarOpen = useAppSelector(selectSidebarOpen);
-  const [createChannel, { isLoading: isCreatingChannel }] = useCreateChannelMutation();
-  const [searchUsers, { data: usersQuery }] = useSearchUsersMutation();
   const [openAddServerDialog, setOpenAddServerDialog] = useState<boolean>(false);
   const [isUploadingLoading, setIsUploadingLoading] = useState<boolean>(false);
   const [step, setStep] = useState<number>(2);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
-  const { startUpload } = useUpload(setIsUploadingLoading, ConfigPrefix.SINGLE_IMAGE_UPLOADER);
   const [search, setSearch] = useState<string>("");
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const activeUI = useAppSelector(selectActiveUI);
+  const currentUserInfo = useAppSelector(selectCurrentUserInfo);
+  const currentChannels = useAppSelector(selectChannels);
+  const sidebarOpen = useAppSelector(selectSidebarOpen);
+  const [createChannel, { isLoading: isCreatingChannel }] = useCreateChannelMutation();
+  const [searchUsers, { data: usersQuery }] = useSearchUsersMutation();
+  const { startUpload } = useUpload(setIsUploadingLoading, ConfigPrefix.SINGLE_IMAGE_UPLOADER);
 
+  const secondSidebarButtons = [
+    {
+      icon: <IconUserFilled size={20} />,
+      label: "Friends",
+      onClick: () => dispatch(setActiveUI(ActiveUI.FRIENDS_LIST)),
+      isActive: activeUI === ActiveUI.FRIENDS_LIST,
+    },
+    {
+      icon: <IconMailFilled size={20} />,
+      label: "Message Requests",
+      onClick: () => dispatch(setActiveUI(ActiveUI.MESSAGE_REQUESTS)),
+      isActive: activeUI === ActiveUI.MESSAGE_REQUESTS,
+    },
+  ];
   const invitationServerJoin = useForm<InvitationServerJoinValues>({
     resolver: zodResolver(invitationServerJoinSchema),
     defaultValues: {
@@ -593,22 +607,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </Dialog>
             </SidebarMenuItem>
             <SidebarSeparator />
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:p-1.5!">
-                <Button variant="ghost" className="justify-start h-9" onClick={() => dispatch(setActiveUI(ActiveUI.FRIENDS_LIST))}>
-                  <IconUserFilled className="size-5!" />
-                  Friends
-                </Button>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:p-1.5!">
-                <Button variant="ghost" className="justify-start h-9" onClick={() => dispatch(setActiveUI(ActiveUI.MESSAGE_REQUESTS))}>
-                  <IconMailFilled className="size-5!" />
-                  Messages Requests
-                </Button>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {secondSidebarButtons.map((button) => (
+              <SidebarMenuItem key={button.label}>
+                <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:p-1.5! text-muted-foreground" isActive={button.isActive}>
+                  <Button variant="ghost" className="justify-start h-9" onClick={button.onClick}>
+                    {button.icon}
+                    {button.label}
+                  </Button>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
@@ -622,7 +630,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               .filter((channel) => channel.type !== ChannelType.Server)
               .map((channel) => (
                 <Link href={`/${channel.type}/${channel._id}`} key={channel._id} className="w-full">
-                  <Button variant="ghost" className="flex items-center justify-start gap-2 w-full ">
+                  <Button variant="ghost" className="flex items-center justify-start gap-2 w-full h-11">
                     <div className="flex items-center gap-2">
                       <ProfileAvailabilityIndicator
                         status={
@@ -640,11 +648,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             ? getDirectMessageChannelOtherMember(channel, currentUserInfo._id).displayName
                             : channel.groupOrServerName || ""
                         }
-                        size="default"
+                        size="sm"
                       />
                       <div className="flex flex-col itmes-start">
                         <div className="flex items-center gap-1">
-                          <p className="font-semibold text-sm">
+                          <p className="font-semibold text-sm text-muted-foreground">
                             {channel.type === ChannelType.Direct
                               ? getDirectMessageChannelOtherMember(channel, currentUserInfo._id).displayName
                               : channel.groupOrServerName || ""}

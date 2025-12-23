@@ -52,7 +52,7 @@ const UserNavigator = () => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button size="icon-xs" variant="ghost">
-                  <IconChevronDown />
+                  <IconChevronDown size={14} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>More</TooltipContent>
@@ -70,7 +70,7 @@ const UserNavigator = () => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button size="icon-xs" variant="ghost">
-                  <IconChevronDown />
+                  <IconChevronDown size={14} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>More</TooltipContent>
