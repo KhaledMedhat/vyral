@@ -238,12 +238,12 @@ export default function ChannelsPage() {
                             type="text"
                             placeholder="You can add friends with their Vyral username"
                             {...field}
-                            className="h-16 placeholder:text-xl"
+                            className="h-16 placeholder:text-xl pr-48"
                           />
                           <Button
                             disabled={!field.value || isSendingFriendRequest}
                             type="submit"
-                            className="absolute right-3 top-1/2 -translate-y-1/2"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 "
                           >
                             {isSendingFriendRequest ? (
                               <>
