@@ -1,6 +1,6 @@
 import { StatusType } from "~/interfaces/user.interface";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { getInitialsFallback } from "~/lib/utils";
+import { cn, getInitialsFallback } from "~/lib/utils";
 import { cva } from "class-variance-authority";
 import { IconMinus, IconMoon } from "@tabler/icons-react";
 
@@ -8,6 +8,7 @@ const avatarVariants = cva("relative inline-block", {
   variants: {
     size: {
       default: "size-10",
+      md: "size-8",
       sm: "size-6.5",
       lg: "size-12",
     },
@@ -21,6 +22,7 @@ const indicatorVariants = cva("absolute bottom-0 -right-1 rounded-full border-2 
   variants: {
     size: {
       default: "size-4.5",
+      md: "size-4",
       sm: "size-4",
       lg: "size-6",
     },
@@ -34,6 +36,7 @@ const statusBadgeVariants = cva("", {
   variants: {
     size: {
       default: "size-5",
+      md: "size-3.5",
       sm: "size-3.5",
       lg: "size-6",
     },
@@ -43,7 +46,7 @@ const statusBadgeVariants = cva("", {
   },
 });
 
-function StatusBadge({ status, size }: { status: StatusType; size: "default" | "sm" | "lg" }) {
+function StatusBadge({ status, size }: { status: StatusType; size: "default" | "sm" | "lg" | "md" }) {
   switch (status) {
     case StatusType.Online:
       return <span className={indicatorVariants({ size, className: "bg-green-500" })} />;
@@ -66,14 +69,15 @@ function StatusBadge({ status, size }: { status: StatusType; size: "default" | "
   }
 }
 
-const ProfileAvailabilityIndicator: React.FC<{ status?: StatusType; imageUrl: string; name: string; size: "default" | "sm" | "lg" }> = ({
-  status,
-  imageUrl,
-  name,
-  size,
-}) => {
+const ProfileAvailabilityIndicator: React.FC<{
+  className?: string;
+  status?: StatusType;
+  imageUrl: string;
+  name: string;
+  size: "default" | "sm" | "lg" | "md";
+}> = ({ className, status, imageUrl, name, size }) => {
   return (
-    <div className="relative inline-block">
+    <div className={cn("relative inline-block", className)}>
       <Avatar className={avatarVariants({ size })}>
         <AvatarImage src={imageUrl} alt={name} />
         <AvatarFallback>{getInitialsFallback(name)}</AvatarFallback>

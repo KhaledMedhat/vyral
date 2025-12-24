@@ -648,7 +648,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             ? getDirectMessageChannelOtherMember(channel, currentUserInfo._id).displayName
                             : channel.groupOrServerName || ""
                         }
-                        size="sm"
+                        size="md"
+                        className="pt-1"
                       />
                       <div className="flex flex-col itmes-start">
                         <div className="flex items-center gap-1">
