@@ -81,7 +81,6 @@ export default function LoginPage() {
         });
     } catch (error) {
       const errData = (error as FetchBaseQueryError).data as NestErrorResponse;
-      console.log(errData);
       if (errData.error === USERNAME_CONFLICT) {
         googleSignupCompletionForm.setError("username", {
           type: "manual",

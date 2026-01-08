@@ -65,6 +65,6 @@ export function createChannelName(membersDisplayNames: string[]) {
  * @returns The other member of the direct message channel
  */
 export function getDirectMessageChannelOtherMember(channel: Channel, currentUserId: string) {
-  const otherMembers = channel.members.filter((member) => member.id._id !== currentUserId);
-  return otherMembers[0].id;
+  const otherMembers = channel.members.filter((member) => member._id !== currentUserId);
+  return otherMembers[0];
 }

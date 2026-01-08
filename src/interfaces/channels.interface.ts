@@ -1,31 +1,21 @@
 import { Message } from "./message.interface";
 import { FriendInterface, StatusType } from "./user.interface";
 
-export interface ChannelMembers {
-  id: FriendInterface;
-  listActive?: boolean;
-}
 export enum ChannelType {
   Direct = "Direct",
   Server = "Server",
   Group = "Group",
 }
 
-export interface ChannelMembersBody {
-  id: string;
-  listActive?: boolean;
-}
-
 export interface CreateChannelBody {
-  members: ChannelMembersBody[];
+  members: FriendInterface[];
   groupOrServerName?: string;
   groupOrServerLogo?: string;
-  createdBy?: string;
   type: ChannelType;
 }
 
 export interface UpdateChannelBody {
-  members?: ChannelMembersBody[];
+  members?: FriendInterface[];
   groupOrServerName?: string;
   groupOrServerLogo?: string;
   createdBy?: string;
@@ -40,12 +30,14 @@ export interface CreateChannelResponse {
   data: {
     type: ChannelType;
     route: string;
+    channel: Channel;
   };
 }
 
 export interface Channel {
   _id: string;
-  members: ChannelMembers[];
+  members: FriendInterface[];
+  listActive?: boolean;
   updatedAt?: Date;
   type: ChannelType;
   createdBy: string;

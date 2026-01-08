@@ -23,7 +23,7 @@ const indicatorVariants = cva("absolute bottom-0 -right-1 rounded-full border-2 
     size: {
       default: "size-4.5",
       md: "size-4",
-      sm: "size-4",
+      sm: "size-3.5",
       lg: "size-6",
     },
   },

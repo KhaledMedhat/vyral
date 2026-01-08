@@ -19,6 +19,9 @@ import { IconLoader, IconMessageCirclePlus, IconPlus, IconUserPlus } from "@tabl
 import { SidebarMenuButton } from "./ui/sidebar";
 import { Spinner } from "./ui/spinner";
 import { FriendsSelectorView } from "~/interfaces/app.interface";
+import { useAppDispatch, useAppSelector } from "~/redux/hooks";
+import { selectCurrentUserChannels } from "~/redux/slices/user/user-selector";
+import { setCurrentChannel } from "~/redux/slices/app/app-slice";
 
 const FriendsSelector: React.FC<{ friends: FriendInterface[]; currentUser: User; view: FriendsSelectorView; otherUser?: FriendInterface[] }> = ({
   friends,
@@ -27,6 +30,7 @@ const FriendsSelector: React.FC<{ friends: FriendInterface[]; currentUser: User;
   otherUser,
 }) => {
   const [createChannel, { isLoading: isCreateChannelLoading }] = useCreateChannelMutation();
+  const dispatch = useAppDispatch();
   const router = useRouter();
   const id = useId();
   const [openPopover, setOpenPopover] = useState<boolean>(false);
@@ -34,7 +38,7 @@ const FriendsSelector: React.FC<{ friends: FriendInterface[]; currentUser: User;
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTagIndex, setActiveTagIndex] = useState<number | null>(null);
   const filteredFriends = friends.filter((friend) => friend.displayName.toLowerCase().includes(searchQuery.toLowerCase()));
-
+  const currentUserChannels = useAppSelector(selectCurrentUserChannels);
   const friendSelectorDisplayHelper = () => {
     switch (view) {
       case FriendsSelectorView.SIDEBAR:
@@ -130,7 +134,23 @@ const FriendsSelector: React.FC<{ friends: FriendInterface[]; currentUser: User;
 
   const handleCreateDM = async () => {
     if (selectedFriends.length === 1) {
+      const directedChannel = currentUserChannels.find((channel) => channel.members.some((member) => member._id === selectedFriends[0]._id));
       router.push(`/dm/${selectedFriends[0]._id}`);
+      directedChannel && dispatch(setCurrentChannel(directedChannel));
+      setOpenPopover(false);
+    } else {
+      await createChannel({
+        members: [...selectedFriends.map((friend) => ({ ...friend })), { ...currentUser }],
+        groupOrServerLogo: SHORT_LOGO_URL,
+        type: ChannelType.Group,
+        groupOrServerName: createChannelName([currentUser.displayName, ...selectedFriends.map((friend) => friend.displayName)]),
+      })
+        .unwrap()
+        .then((res) => {
+          router.push(`/groups/${res.data.route}`);
+          dispatch(setCurrentChannel(res.data.channel));
+          setOpenPopover(false);
+        });
     }
   };
   return (
@@ -177,7 +197,7 @@ const FriendsSelector: React.FC<{ friends: FriendInterface[]; currentUser: User;
                         status={friend.status.type}
                         imageUrl={friend.profilePicture}
                         name={friend.displayName}
-                        size="default"
+                        size="md"
                       />
                       <div className="flex items-center gap-1">
                         <p className="font-semibold text-sm">{friend.displayName}</p>

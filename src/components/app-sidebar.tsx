@@ -1,6 +1,7 @@
 "use client";
 import {
   IconBrandSafari,
+  IconIdBadge,
   IconMailFilled,
   IconPhotoPlus,
   IconPlus,
@@ -21,7 +22,7 @@ import {
   SidebarSeparator,
 } from "./ui/sidebar";
 import UserNavigator from "./user-navigator";
-import { selectCurrentUserInfo } from "~/redux/slices/user/user-selector";
+import { selectCurrentUserChannels, selectCurrentUserInfo } from "~/redux/slices/user/user-selector";
 import { useAppDispatch, useAppSelector } from "~/redux/hooks";
 import Link from "next/link";
 import Image from "next/image";
@@ -36,8 +37,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "./ui/input";
 import useUpload from "~/hooks/use-upload";
 import { ActiveUI, ConfigPrefix, FriendsSelectorView } from "~/interfaces/app.interface";
-import { useCreateChannelMutation } from "~/redux/apis/channel.api";
-import { ChannelType } from "~/interfaces/channels.interface";
+import { useCreateChannelMutation, useUpdateChannelActiveListMutation } from "~/redux/apis/channel.api";
+import { Channel, ChannelType } from "~/interfaces/channels.interface";
 import { toast } from "sonner";
 import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import { NestErrorResponse } from "~/interfaces/error.interface";
@@ -51,9 +52,19 @@ import { useSearchUsersMutation } from "~/redux/apis/user.api";
 import ProfileAvailabilityIndicator from "./profile-availability-indicator";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./ui/empty";
 import FriendsSelector from "./friends-selector";
-import { setActiveUI } from "~/redux/slices/app/app-slice";
-import { selectActiveUI, selectChannels, selectSidebarOpen } from "~/redux/slices/app/app-selector";
-import { getDirectMessageChannelOtherMember } from "~/lib/utils";
+import { setActiveUI, setCurrentChannel } from "~/redux/slices/app/app-slice";
+import { selectActiveUI, selectSidebarOpen } from "~/redux/slices/app/app-selector";
+import { getDirectMessageChannelOtherMember, getInitialsFallback } from "~/lib/utils";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "./ui/context-menu";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [openAddServerDialog, setOpenAddServerDialog] = useState<boolean>(false);
@@ -65,9 +76,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const dispatch = useAppDispatch();
   const activeUI = useAppSelector(selectActiveUI);
   const currentUserInfo = useAppSelector(selectCurrentUserInfo);
-  const currentChannels = useAppSelector(selectChannels);
+  const currentChannels = useAppSelector(selectCurrentUserChannels);
+  console.log(currentChannels);
   const sidebarOpen = useAppSelector(selectSidebarOpen);
   const [createChannel, { isLoading: isCreatingChannel }] = useCreateChannelMutation();
+  const [updateChannelActiveList] = useUpdateChannelActiveListMutation();
   const [searchUsers, { data: usersQuery }] = useSearchUsersMutation();
   const { startUpload } = useUpload(setIsUploadingLoading, ConfigPrefix.SINGLE_IMAGE_UPLOADER);
 
@@ -75,16 +88,44 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     {
       icon: <IconUserFilled size={20} />,
       label: "Friends",
-      onClick: () => dispatch(setActiveUI(ActiveUI.FRIENDS_LIST)),
+      onClick: () => {
+        dispatch(setActiveUI(ActiveUI.FRIENDS_LIST));
+        router.push(`/channels/${currentUserInfo.channelSlug}`);
+      },
       isActive: activeUI === ActiveUI.FRIENDS_LIST,
     },
     {
       icon: <IconMailFilled size={20} />,
       label: "Message Requests",
-      onClick: () => dispatch(setActiveUI(ActiveUI.MESSAGE_REQUESTS)),
+      onClick: () => {
+        dispatch(setActiveUI(ActiveUI.MESSAGE_REQUESTS));
+        router.push(`/channels/${currentUserInfo.channelSlug}`);
+      },
       isActive: activeUI === ActiveUI.MESSAGE_REQUESTS,
     },
   ];
+
+  const mountDmOrGroupChannelFinder = (channel: Channel) => {
+    const otherMember = getDirectMessageChannelOtherMember(channel, currentUserInfo._id);
+    switch (channel.type) {
+      case ChannelType.Direct:
+        return {
+          route: `/dm/${otherMember?._id}`,
+          imageUrl: otherMember?.profilePicture || "",
+          name: otherMember?.displayName || "",
+          fallbackName: getInitialsFallback(otherMember?.displayName),
+        };
+      case ChannelType.Group:
+        return {
+          route: `/group/${channel._id}`,
+          imageUrl: channel.groupOrServerLogo || "",
+          name: channel.groupOrServerName || "",
+          fallbackName: getInitialsFallback(channel.groupOrServerName || ""),
+        };
+      default:
+        undefined;
+    }
+  };
   const invitationServerJoin = useForm<InvitationServerJoinValues>({
     resolver: zodResolver(invitationServerJoinSchema),
     defaultValues: {
@@ -109,8 +150,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         startUpload([data.serverImage]).then(async (res) => {
           if (res && res[0]) {
             await createChannel({
-              members: [{ id: currentUserInfo._id }],
-              createdBy: currentUserInfo._id,
+              members: [{ ...currentUserInfo }],
               groupOrServerLogo: res[0].ufsUrl,
               groupOrServerName: data.serverName,
               type: ChannelType.Server,
@@ -124,8 +164,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         });
       } else {
         await createChannel({
-          members: [{ id: currentUserInfo._id }],
-          createdBy: currentUserInfo._id,
+          members: [{ ...currentUserInfo }],
           groupOrServerLogo: undefined,
           groupOrServerName: data.serverName,
           type: ChannelType.Server,
@@ -188,7 +227,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <ScrollArea className="h-full">
             <div className="flex flex-col gap-4">
               {currentChannels
-                .filter((channel) => channel.type === ChannelType.Server)
+                .filter((channel) => channel?.type === ChannelType.Server)
                 .map((channel) => (
                   <SidebarMenuItem key={channel._id}>
                     <SidebarMenuButton
@@ -499,7 +538,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           const value = e.target.value;
                           setSearch(value);
                           const searchValue = value.startsWith("@") ? value.slice(1) : value;
-                          console.log(searchValue);
                           if (searchValue.trim().length > 0) {
                             await searchUsers(searchValue.trim());
                           }
@@ -551,7 +589,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           </CollapsibleTrigger>
                           <CollapsibleContent className="flex flex-col gap-1 w-full items-start">
                             {currentChannels
-                              .filter((channel) => channel.type === ChannelType.Server)
+                              .filter((channel) => channel?.type === ChannelType.Server)
                               .map((channel) => (
                                 <Link href={`/server/${channel._id}`} key={channel._id} className="w-full">
                                   <Button variant="ghost" className="flex items-center justify-start gap-2 w-full ">
@@ -575,17 +613,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           </CollapsibleTrigger>
                           <CollapsibleContent className="flex flex-col gap-1 w-full items-start">
                             {currentChannels
-                              .filter((channel) => channel.type !== ChannelType.Server)
+                              .filter((channel) => channel && channel.type !== ChannelType.Server)
                               .map((channel) => (
-                                <Link href={`/server/${channel._id}`} key={channel._id} className="w-full">
+                                <Link href={mountDmOrGroupChannelFinder(channel)?.route || ""} key={channel._id} className="w-full">
                                   <Button variant="ghost" className="flex items-center justify-start gap-2 w-full ">
                                     <IconVolume stroke={2} className="size-4 text-muted-foreground" />
                                     <span className="flex items-center gap-2">
                                       <Avatar className="size-5">
-                                        <AvatarImage src={channel.groupOrServerLogo || ""} />
-                                        <AvatarFallback>{channel.groupOrServerName?.charAt(0)}</AvatarFallback>
+                                        <AvatarImage src={mountDmOrGroupChannelFinder(channel)?.imageUrl || ""} />
+                                        <AvatarFallback>{mountDmOrGroupChannelFinder(channel)?.fallbackName || ""}</AvatarFallback>
                                       </Avatar>
-                                      {channel.groupOrServerName}
+                                      {mountDmOrGroupChannelFinder(channel)?.name || ""}
                                     </span>
                                   </Button>
                                 </Link>
@@ -626,46 +664,101 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <FriendsSelector friends={currentUserInfo.friends} currentUser={currentUserInfo} view={FriendsSelectorView.SIDEBAR} />
           </div>
           <ScrollArea className="h-full pl-2">
-            {currentChannels
-              .filter((channel) => channel.type !== ChannelType.Server)
-              .map((channel) => (
-                <Link href={`/${channel.type}/${channel._id}`} key={channel._id} className="w-full">
-                  <Button variant="ghost" className="flex items-center justify-start gap-2 w-full h-11">
-                    <div className="flex items-center gap-2">
-                      <ProfileAvailabilityIndicator
-                        status={
-                          channel.type === ChannelType.Direct
-                            ? getDirectMessageChannelOtherMember(channel, currentUserInfo._id).status.type
-                            : undefined
-                        }
-                        imageUrl={
-                          channel.type === ChannelType.Direct
-                            ? getDirectMessageChannelOtherMember(channel, currentUserInfo._id).profilePicture || ""
-                            : channel.groupOrServerLogo || ""
-                        }
-                        name={
-                          channel.type === ChannelType.Direct
-                            ? getDirectMessageChannelOtherMember(channel, currentUserInfo._id).displayName
-                            : channel.groupOrServerName || ""
-                        }
-                        size="md"
-                        className="pt-1"
-                      />
-                      <div className="flex flex-col itmes-start">
-                        <div className="flex items-center gap-1">
-                          <p className="font-semibold text-sm text-muted-foreground">
-                            {channel.type === ChannelType.Direct
-                              ? getDirectMessageChannelOtherMember(channel, currentUserInfo._id).displayName
-                              : channel.groupOrServerName || ""}
-                          </p>
-                          {/* <p className="text-xs text-muted-foreground group-hover/friend:block hidden">{friend.username}</p> */}
-                        </div>
-                        {/* <p className="text-xs font-semibold text-muted-foreground">{friend.status.type}</p> */}
-                      </div>
-                    </div>
-                  </Button>
-                </Link>
-              ))}
+            {currentChannels.length > 0 &&
+              currentChannels
+                .filter((channel) => channel && channel.type !== ChannelType.Server)
+                .map((channel) => {
+                  const otherMember = getDirectMessageChannelOtherMember(channel, currentUserInfo._id);
+                  return (
+                    <ContextMenu key={channel._id}>
+                      <ContextMenuTrigger asChild>
+                        <Link
+                          href={channel.type === ChannelType.Direct ? `/dm/${otherMember?._id}` : `/group/${channel._id}`}
+                          className="w-full group/channel"
+                        >
+                          <Button
+                            variant="ghost"
+                            className="flex items-center justify-between gap-2 w-full h-11"
+                            onClick={() => {
+                              dispatch(setCurrentChannel(channel));
+                              channel.type === ChannelType.Direct
+                                ? dispatch(setActiveUI(ActiveUI.DIRECT_MESSAGES))
+                                : dispatch(setActiveUI(ActiveUI.GROUP));
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <ProfileAvailabilityIndicator
+                                status={channel.type === ChannelType.Direct ? otherMember?.status?.type : undefined}
+                                imageUrl={channel.type === ChannelType.Direct ? otherMember?.profilePicture || "" : channel.groupOrServerLogo || ""}
+                                name={channel.type === ChannelType.Direct ? otherMember?.displayName || "" : channel.groupOrServerName || ""}
+                                size="md"
+                                className="pt-1"
+                              />
+                              <div className="flex flex-col itmes-start">
+                                <div className="flex items-center gap-1">
+                                  <p className="font-semibold text-sm text-muted-foreground">
+                                    {channel.type === ChannelType.Direct ? otherMember?.displayName || "" : channel.groupOrServerName || ""}
+                                  </p>
+                                </div>
+                                {channel.type === ChannelType.Group && (
+                                  <Badge variant="outline" className="text-xs text-muted-foreground">
+                                    Group
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <div
+                              className="cursor-pointer hidden group-hover/channel:block bg-muted-foreground/10 rounded-full p-1 hover:bg-main"
+                              onClick={async (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (channel.type === ChannelType.Direct) {
+                                  await updateChannelActiveList({ channelId: channel._id, memberId: currentUserInfo._id });
+                                } else {
+                                }
+                                console.log("delete channel");
+                              }}
+                            >
+                              <IconX size={14} className="text-muted-foreground" />
+                            </div>
+                          </Button>
+                        </Link>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="w-44">
+                        <ContextMenuItem disabled>Mark As Read</ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem>Profile</ContextMenuItem>
+                        <ContextMenuItem>Call</ContextMenuItem>
+                        <ContextMenuItem>Close DM</ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuSub>
+                          <ContextMenuSubTrigger>Invite to Server</ContextMenuSubTrigger>
+                          <ContextMenuSubContent className="w-44">
+                            <ContextMenuItem>Save Page...</ContextMenuItem>
+                            <ContextMenuItem>Create Shortcut...</ContextMenuItem>
+                            <ContextMenuItem>Name Window...</ContextMenuItem>
+                            <ContextMenuItem>Developer Tools</ContextMenuItem>
+                          </ContextMenuSubContent>
+                        </ContextMenuSub>
+                        <ContextMenuItem variant="destructive">Remove Friend</ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuSub>
+                          <ContextMenuSubTrigger>Mute</ContextMenuSubTrigger>
+                          <ContextMenuSubContent className="w-44">
+                            <ContextMenuItem>Save Page...</ContextMenuItem>
+                            <ContextMenuItem>Create Shortcut...</ContextMenuItem>
+                            <ContextMenuItem>Name Window...</ContextMenuItem>
+                            <ContextMenuItem>Developer Tools</ContextMenuItem>
+                          </ContextMenuSubContent>
+                        </ContextMenuSub>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem className="justify-between">
+                          Copy User ID <IconIdBadge />
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  );
+                })}
           </ScrollArea>
         </SidebarContent>
         <SidebarFooter></SidebarFooter>

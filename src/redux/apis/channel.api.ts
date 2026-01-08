@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { CreateChannelBody, CreateChannelResponse } from "~/interfaces/channels.interface";
+import { Channel, CreateChannelBody, CreateChannelResponse } from "~/interfaces/channels.interface";
+import { authApi } from "./auth.api";
 
 export const channelApi = createApi({
   reducerPath: "channelApi",
@@ -8,7 +9,7 @@ export const channelApi = createApi({
     credentials: "include",
   }),
 
-  tagTypes: ["Channel"], // Define tag types
+  tagTypes: ["Channel"],
   endpoints: (builder) => ({
     createChannel: builder.mutation<CreateChannelResponse, CreateChannelBody>({
       query: (body) => ({
@@ -16,9 +17,19 @@ export const channelApi = createApi({
         method: "POST",
         body,
       }),
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        await queryFulfilled;
+        dispatch(authApi.util.invalidateTags(["Auth"]));
+      },
+    }),
+    updateChannelActiveList: builder.mutation<Channel, { channelId: string; memberId: string }>({
+      query: (args) => ({
+        url: `/channels/update-member-list-active/${args.channelId}/${args.memberId}`,
+        method: "PATCH",
+      }),
       invalidatesTags: ["Channel"],
     }),
   }),
 });
 
-export const { useCreateChannelMutation } = channelApi;
+export const { useCreateChannelMutation, useUpdateChannelActiveListMutation } = channelApi;

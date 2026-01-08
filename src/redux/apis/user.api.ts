@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { CreateChannelBody, CreateChannelResponse } from "~/interfaces/channels.interface";
 import { SendFriendRequest, User } from "~/interfaces/user.interface";
+import { authApi } from "./auth.api";
 
 export const userApi = createApi({
   reducerPath: "userApi",
@@ -30,6 +31,14 @@ export const userApi = createApi({
         url: `/user/friend-request-accept/${args.requestId}`,
         method: "PATCH",
       }),
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(authApi.util.invalidateTags(["Auth"]));
+        } catch {
+          dispatch(authApi.util.invalidateTags(["Auth"]));
+        }
+      },
     }),
 
     rejectFriendRequest: builder.mutation<void, { requestId: string }>({
@@ -37,6 +46,14 @@ export const userApi = createApi({
         url: `/user/friend-request-reject/${args.requestId}`,
         method: "DELETE",
       }),
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(authApi.util.invalidateTags(["Auth"]));
+        } catch {
+          dispatch(authApi.util.invalidateTags(["Auth"]));
+        }
+      },
     }),
     removeFriend: builder.mutation<void, string>({
       query: (friendId) => ({

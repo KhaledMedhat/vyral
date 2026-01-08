@@ -1,6 +1,15 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
 import { Channel } from "~/interfaces/channels.interface";
-import { FriendInterface, FriendRequest, ObsessionDuration, StatusDuration, StatusType, User, UserInitialState } from "~/interfaces/user.interface";
+import {
+  FriendInterface,
+  FriendRequest,
+  ObsessionDuration,
+  StatusDuration,
+  StatusType,
+  User,
+  UserInitialState,
+  Notification,
+} from "~/interfaces/user.interface";
 
 const initialState: UserInitialState = {
   isLoggedIn: false,
@@ -73,14 +82,49 @@ export const userSlice = createSlice({
     setChannels: (state, action: PayloadAction<Channel[]>) => {
       state.channelsInfo = action.payload;
     },
-    // setNotifications: (state, action: PayloadAction<Notification[]>) => {
-    //   state.notifications = action.payload;
-    // },
+    addChannel: (state, action: PayloadAction<Channel>) => {
+      if (!state.channelsInfo.some((channel) => channel._id === action.payload._id)) {
+        state.channelsInfo.push(action.payload);
+      }
+    },
+    addNotification: (state, action: PayloadAction<Notification>) => {
+      if (!state.notifications.some((notification) => notification._id === action.payload._id)) {
+        state.notifications.push(action.payload);
+      }
+    },
+    setNotifications: (state, action: PayloadAction<Notification[]>) => {
+      state.notifications = action.payload;
+    },
     setFriendRequests: (state, action: PayloadAction<FriendRequest[]>) => {
       state.friendRequests = action.payload;
+    },
+    addFriendRequest: (state, action: PayloadAction<FriendRequest>) => {
+      // Avoid duplicates
+      if (!state.friendRequests.some((req) => req._id === action.payload._id)) {
+        state.friendRequests.push(action.payload);
+      }
+    },
+    removeFriendRequest: (state, action: PayloadAction<string>) => {
+      state.friendRequests = state.friendRequests.filter((req) => req._id !== action.payload);
+    },
+    setChannelActiveList: (state, action: PayloadAction<{ channelId: string; listActive: boolean }>) => {
+      state.channelsInfo = state.channelsInfo.map((channel) =>
+        channel._id === action.payload.channelId ? { ...channel, listActive: action.payload.listActive } : channel
+      );
     },
   },
 });
 
-export const { setUserLoggingInStatus, setUserInfo, setUpdatedFriend, setChannels, setFriendRequests } = userSlice.actions;
+export const {
+  setUserLoggingInStatus,
+  setUserInfo,
+  setUpdatedFriend,
+  setChannels,
+  setFriendRequests,
+  addFriendRequest,
+  removeFriendRequest,
+  setChannelActiveList,
+  addChannel,
+  addNotification,
+} = userSlice.actions;
 export default userSlice.reducer;

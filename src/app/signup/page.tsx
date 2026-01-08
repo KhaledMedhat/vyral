@@ -31,6 +31,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import Image from "next/image";
+import { SHORT_LOGO_URL } from "~/constants/constants";
 
 export default function SignupPage() {
   const [step, setStep] = useState(1);
@@ -126,6 +127,7 @@ export default function SignupPage() {
         password: step1Data.password,
         firstName: step1Data.firstName,
         lastName: step1Data.lastName,
+        profilePicture: SHORT_LOGO_URL,
         displayName: `${step1Data.firstName.charAt(0).toUpperCase()}${step1Data.firstName.slice(1)} ${step1Data.lastName
           .charAt(0)
           .toUpperCase()}${step1Data.lastName.slice(1)}`,
@@ -158,6 +160,7 @@ export default function SignupPage() {
       password: step1Data.password,
       firstName: step1Data.firstName,
       lastName: step1Data.lastName,
+      profilePicture: SHORT_LOGO_URL,
       displayName: `${step1Data.firstName} ${step1Data.lastName}`,
       username: step2Form.getValues("username"),
       provider: "email",

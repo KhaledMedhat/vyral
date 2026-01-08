@@ -1,8 +1,8 @@
 "use client";
-import { useEffect } from "react";
 import { AppSidebar } from "~/components/app-sidebar";
 import DashboardHeader from "~/components/dashboard-header";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar";
+import { SocketProvider } from "~/hooks/use-socket";
+import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 import { Spinner } from "~/components/ui/spinner";
 import { useGetUserInfoQuery } from "~/redux/apis/auth.api";
 
@@ -13,15 +13,9 @@ export default function ChannelsLayout({
 }>) {
   const { isLoading } = useGetUserInfoQuery();
 
-  // useEffect(() => {
-  //     if (!isLoading) {
-  //         socketService.initialize();
-  //     }
-  // }, [isLoading]);
-
   if (isLoading) return <Spinner />;
   return (
-    <>
+    <SocketProvider>
       <SidebarProvider
         style={
           {
@@ -36,6 +30,6 @@ export default function ChannelsLayout({
           {children}
         </SidebarInset>
       </SidebarProvider>
-    </>
+    </SocketProvider>
   );
 }

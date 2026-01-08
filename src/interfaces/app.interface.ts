@@ -1,3 +1,5 @@
+import { Channel } from "./channels.interface";
+
 export enum ConfigPrefix {
   SINGLE_IMAGE_UPLOADER = "singleImageUploader",
   CHAT_INPUT_UPLOADER = "chatInputUploader",
@@ -35,11 +37,14 @@ export interface FriendListPageInfo<T> {
   items: T[];
   showStatus: boolean;
   requestIds: string[];
+  onSearch: (search: string) => void;
 }
 
 export interface AppInitialState {
   activeUI: ActiveUI;
   sidebarOpen: boolean;
+  showChannelDetails: boolean;
   friendsHeaderActiveUI: FriendsView;
   messageRequestsHeaderActiveUI: MessageRequestsView;
+  currentChannel: Channel | null;
 }

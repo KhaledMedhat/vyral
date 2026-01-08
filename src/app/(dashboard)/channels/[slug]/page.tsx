@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import { IconCheck, IconDotsVertical, IconMessageCircleFilled, IconSearch, IconX } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import ProfileAvailabilityIndicator from "~/components/profile-availability-indicator";
@@ -33,16 +33,12 @@ import {
   useSendFriendRequestMutation,
 } from "~/redux/apis/user.api";
 import { useAppSelector } from "~/redux/hooks";
-import {
-  selectActiveUI,
-  selectDashboardFriendsHeaderActiveUI,
-  selectDashboardMessageRequestsHeaderActiveUI,
-  selectFriendRequests,
-} from "~/redux/slices/app/app-selector";
-import { selectCurrentUserInfo } from "~/redux/slices/user/user-selector";
+import { selectActiveUI, selectDashboardFriendsHeaderActiveUI, selectDashboardMessageRequestsHeaderActiveUI } from "~/redux/slices/app/app-selector";
+import { selectCurrentUserInfo, selectFriendRequests } from "~/redux/slices/user/user-selector";
 
 export default function ChannelsPage() {
   const router = useRouter();
+  const [search, setSearch] = useState<string>("");
   const [removeFriend, { isLoading: isRemovingFriend }] = useRemoveFriendMutation();
   const [sendFriendRequest, { isLoading: isSendingFriendRequest }] = useSendFriendRequestMutation();
   const [acceptFriendRequest, { isLoading: isAcceptingFriendRequest }] = useAcceptFriendRequestMutation();
@@ -53,7 +49,6 @@ export default function ChannelsPage() {
   const currentUserInfo = useAppSelector(selectCurrentUserInfo);
   const friendRequests = useAppSelector(selectFriendRequests);
   const onlineFriends = currentUserInfo.friends.filter((friend) => friend.status.type === StatusType.Online);
-
   const sendFriendRequestForm = useForm<SendFriendRequestValues>({
     resolver: zodResolver(sendFriendRequestSchema),
     defaultValues: {
@@ -120,24 +115,55 @@ export default function ChannelsPage() {
   };
   const pendingRequests = useMemo(() => friendRequests.filter((request) => request.status === FriendRequestStatus.Pending), [friendRequests]);
 
+  const filterBySearch = <T extends FriendInterface>(items: T[]): T[] => {
+    const searchValue = search.startsWith("@") ? search.slice(1) : search;
+    if (searchValue.trim().length === 0) return items;
+    return items.filter(
+      (friend) =>
+        friend.username.toLowerCase().includes(searchValue.toLowerCase()) || friend.displayName.toLowerCase().includes(searchValue.toLowerCase())
+    );
+  };
+
   const friendListPageInfo = useMemo((): FriendListPageInfo<FriendInterface> => {
+    const pendingSenders = pendingRequests.map((request) => request.sender);
+
     switch (friendsHeaderActiveUI) {
       case FriendsView.ONLINE:
-        return { status: "Online", count: onlineFriends.length, items: onlineFriends, showStatus: true, requestIds: [] };
+        const filteredOnline = filterBySearch(onlineFriends);
+        return {
+          status: "Online",
+          count: filteredOnline.length,
+          items: filteredOnline,
+          showStatus: true,
+          requestIds: [],
+          onSearch: setSearch,
+        };
       case FriendsView.ALL:
-        return { status: "All", count: currentUserInfo.friends.length, items: currentUserInfo.friends, showStatus: true, requestIds: [] };
+        const filteredAll = filterBySearch(currentUserInfo.friends);
+        return {
+          status: "All",
+          count: filteredAll.length,
+          items: filteredAll,
+          showStatus: true,
+          requestIds: [],
+          onSearch: setSearch,
+        };
       case FriendsView.PENDING:
+        const filteredPending = filterBySearch(pendingSenders);
+        console.log(filteredPending);
+        const filteredRequestIds = pendingRequests.filter((req) => filteredPending.some((f) => f._id === req.sender._id)).map((req) => req._id);
         return {
           status: "Received",
-          count: pendingRequests.length,
-          items: pendingRequests.map((request) => request.sender),
-          requestIds: pendingRequests.map((request) => request._id),
+          count: filteredPending.length,
+          items: filteredPending,
+          requestIds: filteredRequestIds,
           showStatus: false,
+          onSearch: setSearch,
         };
       default:
-        return { status: "", count: 0, items: [], showStatus: false, requestIds: [] };
+        return { status: "", count: 0, items: [], showStatus: false, requestIds: [], onSearch: () => {} };
     }
-  }, [friendsHeaderActiveUI, onlineFriends, currentUserInfo.friends, pendingRequests]);
+  }, [friendsHeaderActiveUI, onlineFriends, currentUserInfo.friends, pendingRequests, search]);
 
   const mountButtons = (friendId: string, requestId: string) => {
     if (friendsHeaderActiveUI !== FriendsView.PENDING) {
@@ -181,37 +207,46 @@ export default function ChannelsPage() {
         <>
           <div className="relative w-full">
             <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input type="text" placeholder="Search" className="pl-10 h-12" />
+            <Input
+              type="text"
+              placeholder="Search"
+              className="pl-10 h-12"
+              value={search}
+              onChange={(e) => friendListPageInfo.onSearch(e.target.value)}
+            />
           </div>
           <p className="text-sm">
             {friendListPageInfo.status} - {friendListPageInfo.count}
           </p>
           <Table>
             <TableBody>
-              {friendListPageInfo.items.map((friend, index) => (
-                <TableRow key={friend._id} className="justify-between flex items-center group/friend border-t!">
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <ProfileAvailabilityIndicator
-                        status={friendListPageInfo.showStatus ? friend.status.type : undefined}
-                        imageUrl={friend.profilePicture}
-                        name={friend.displayName}
-                        size="default"
-                      />
-                      <div className="flex flex-col itmes-start">
-                        <div className="flex items-center gap-1">
-                          <p className="font-semibold text-sm">{friend.displayName}</p>
-                          <p className="text-xs text-muted-foreground group-hover/friend:block hidden">{friend.username}</p>
+              {friendListPageInfo.items.map((friend, index) => {
+                console.log("Rendering friend:", friend._id, friend);
+                return (
+                  <TableRow key={friend._id} className="justify-between flex items-center group/friend border-t!">
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <ProfileAvailabilityIndicator
+                          status={friendListPageInfo.showStatus ? friend.status.type : undefined}
+                          imageUrl={friend.profilePicture}
+                          name={friend.displayName}
+                          size="md"
+                        />
+                        <div className="flex flex-col itmes-start">
+                          <div className="flex items-center gap-1">
+                            <p className="font-semibold text-sm">{friend.displayName}</p>
+                            <p className="text-xs text-muted-foreground group-hover/friend:block hidden">{friend.username}</p>
+                          </div>
+                          <p className="text-xs font-semibold text-muted-foreground">
+                            {friendListPageInfo.showStatus ? friend.status.type : friend.username}
+                          </p>
                         </div>
-                        <p className="text-xs font-semibold text-muted-foreground">
-                          {friendListPageInfo.showStatus ? friend.status.type : friend.username}
-                        </p>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="gap-1 flex items-center">{mountButtons(friend._id, friendListPageInfo.requestIds[index] ?? "")}</TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell className="gap-1 flex items-center">{mountButtons(friend._id, friendListPageInfo.requestIds[index] ?? "")}</TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </>
@@ -267,12 +302,30 @@ export default function ChannelsPage() {
       );
     }
   };
+
+  const mountMessageRequestsSection = () => {
+    if (messageRequestsHeaderActiveUI === MessageRequestsView.REQUESTS) {
+      return (
+        <div>
+          <h1 className="text-2xl font-semibold">Message Requests</h1>
+        </div>
+      );
+    }
+    if (messageRequestsHeaderActiveUI === MessageRequestsView.SPAM) {
+      return (
+        <div>
+          <h1 className="text-2xl font-semibold">Spam</h1>
+        </div>
+      );
+    }
+    return null;
+  };
   const mountPageContent = () => {
     if (activeUI === ActiveUI.FRIENDS_LIST) {
       return mountFriendListSection();
     }
     if (activeUI === ActiveUI.MESSAGE_REQUESTS) {
-      return <div>Message Requests</div>;
+      return mountMessageRequestsSection();
     }
   };
 

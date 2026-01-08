@@ -44,7 +44,7 @@ const UserNavigator = () => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button size="icon" variant="ghost">
-                  <IconMicrophone className="size-5" />
+                  <IconMicrophone size={20} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Mute</TooltipContent>
@@ -62,7 +62,7 @@ const UserNavigator = () => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button size="icon" variant="ghost">
-                  <IconHeadphonesFilled className="size-5" />
+                  <IconHeadphonesFilled size={20} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Deafen</TooltipContent>
@@ -79,7 +79,7 @@ const UserNavigator = () => {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon">
-                <IconSettings className="size-5" />
+                <IconSettings size={20} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Settings</TooltipContent>
