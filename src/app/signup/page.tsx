@@ -32,14 +32,17 @@ import {
 } from "@tabler/icons-react";
 import Image from "next/image";
 import { SHORT_LOGO_URL } from "~/constants/constants";
+import { ImageCropperInline } from "~/components/image-cropper";
 
 export default function SignupPage() {
-  const [step, setStep] = useState(1);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isUploadingLoading, setIsUploadingLoading] = useState(false);
+  const [step, setStep] = useState<number>(1);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+  const [isUploadingLoading, setIsUploadingLoading] = useState<boolean>(false);
   const [step1Data, setStep1Data] = useState<SignupStep1Values | null>(null);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [isCropping, setIsCropping] = useState<boolean>(false);
+  const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
   const [createAccount, { isLoading: isCreatingAccount }] = useCreateAccountMutation();
   const { startUpload } = useUpload(setIsUploadingLoading, ConfigPrefix.SINGLE_IMAGE_UPLOADER);
   const router = useRouter();
@@ -81,14 +84,32 @@ export default function SignupPage() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      step2Form.setValue("profileImage", file);
       const reader = new FileReader();
       reader.onloadend = () => {
         const imageUrl = reader.result as string;
-        setProfileImageUrl(imageUrl);
+        setOriginalImageUrl(imageUrl);
+        setIsCropping(true);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCropCancel = () => {
+    setIsCropping(false);
+    setOriginalImageUrl(null);
+  };
+
+  const handleCropApply = (croppedFile: File) => {
+    step2Form.setValue("profileImage", croppedFile);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfileImageUrl(reader.result as string);
+    };
+    reader.readAsDataURL(croppedFile);
+
+    setIsCropping(false);
+    setOriginalImageUrl(null);
   };
 
   const onStep2Submit = async (data: SignupStep2Values) => {
@@ -434,105 +455,114 @@ export default function SignupPage() {
                   step === 2 ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full absolute inset-0 pointer-events-none"
                 }`}
               >
-                <Form {...step2Form}>
-                  <form onSubmit={step2Form.handleSubmit(onStep2Submit)} className="space-y-6">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="relative group">
-                        {profileImageUrl && (
-                          <Button
-                            variant="destructive"
-                            size="icon-sm"
-                            className="absolute top-0 right-0 rounded-full z-10"
-                            onClick={() => {
-                              setProfileImageUrl(null);
-                              step2Form.setValue("profileImage", undefined);
-                            }}
-                          >
-                            <IconX className="size-4" />
-                          </Button>
-                        )}
-                        <div
-                          className={`w-28 h-28 rounded-full border-2 border-dashed border-border flex items-center justify-center overflow-hidden transition-all group-hover:border-accent ${
-                            profileImageUrl ? "border-solid border-accent" : ""
-                          }`}
-                        >
-                          {profileImageUrl ? (
-                            <img src={profileImageUrl || "/placeholder.svg"} alt="Profile" className="w-full h-full object-cover" />
-                          ) : (
-                            <IconPhotoPlus stroke={2} className="h-8 w-8 text-muted-foreground group-hover:text-accent transition-colors" />
+                {isCropping && originalImageUrl ? (
+                  <ImageCropperInline
+                    imageUrl={originalImageUrl}
+                    onApply={handleCropApply}
+                    onCancel={handleCropCancel}
+                    title="Crop Profile Picture"
+                  />
+                ) : (
+                  <Form {...step2Form}>
+                    <form onSubmit={step2Form.handleSubmit(onStep2Submit)} className="space-y-6">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="relative group">
+                          {profileImageUrl && (
+                            <Button
+                              variant="destructive"
+                              size="icon-sm"
+                              className="absolute top-0 right-0 rounded-full z-10"
+                              onClick={() => {
+                                setProfileImageUrl(null);
+                                step2Form.setValue("profileImage", undefined);
+                              }}
+                            >
+                              <IconX className="size-4" />
+                            </Button>
                           )}
+                          <div
+                            className={`w-28 h-28 rounded-full border-2 border-dashed border-border flex items-center justify-center overflow-hidden transition-all group-hover:border-accent ${
+                              profileImageUrl ? "border-solid border-accent" : ""
+                            }`}
+                          >
+                            {profileImageUrl ? (
+                              <img src={profileImageUrl || "/placeholder.svg"} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                              <IconPhotoPlus stroke={2} className="h-8 w-8 text-muted-foreground group-hover:text-accent transition-colors" />
+                            )}
+                          </div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
                         </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        />
+                        <p className="text-sm text-muted-foreground">Click to upload a profile picture (optional)</p>
                       </div>
-                      <p className="text-sm text-muted-foreground">Click to upload a profile picture (optional)</p>
-                    </div>
 
-                    <FormField
-                      control={step2Form.control}
-                      name="username"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Username *</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <IconAt className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                type="text"
-                                placeholder="yourname"
-                                className="pl-10 h-11"
-                                {...field}
-                                onChange={(e) => {
-                                  const value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
-                                  field.onChange(value);
-                                }}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                          <FormDescription className="text-xs">Only lowercase letters, numbers, and underscores allowed</FormDescription>
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="space-y-3">
-                      <Button
-                        type="submit"
-                        className="w-full rounded-full h-11 bg-accent text-accent-foreground hover:bg-accent/90"
-                        disabled={isUploadingLoading || isCreatingAccount}
-                      >
-                        {isCreatingAccount || isUploadingLoading ? (
-                          <>
-                            <Spinner />
-                            Creating...
-                          </>
-                        ) : (
-                          <>Create Account</>
+                      <FormField
+                        control={step2Form.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Username *</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <IconAt className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  type="text"
+                                  placeholder="yourname"
+                                  className="pl-10 h-11"
+                                  {...field}
+                                  onChange={(e) => {
+                                    const value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+                                    field.onChange(value);
+                                  }}
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                            <FormDescription className="text-xs">Only lowercase letters, numbers, and underscores allowed</FormDescription>
+                          </FormItem>
                         )}
-                      </Button>
+                      />
 
-                      <Button type="button" variant="outline" className="w-full rounded-full h-11 bg-transparent" onClick={() => setStep(1)}>
-                        Back
-                      </Button>
-
-                      {!profileImageUrl && step2Form.watch("username").length >= 3 && (
+                      <div className="space-y-3">
                         <Button
-                          type="button"
-                          variant="ghost"
-                          className="w-full text-muted-foreground hover:text-foreground"
-                          onClick={handleSkipImage}
+                          type="submit"
+                          className="w-full rounded-full h-11 bg-accent text-accent-foreground hover:bg-accent/90"
                           disabled={isUploadingLoading || isCreatingAccount}
                         >
-                          Skip profile picture for now
+                          {isCreatingAccount || isUploadingLoading ? (
+                            <>
+                              <Spinner />
+                              Creating...
+                            </>
+                          ) : (
+                            <>Create Account</>
+                          )}
                         </Button>
-                      )}
-                    </div>
-                  </form>
-                </Form>
+
+                        <Button type="button" variant="outline" className="w-full rounded-full h-11 bg-transparent" onClick={() => setStep(1)}>
+                          Back
+                        </Button>
+
+                        {!profileImageUrl && step2Form.watch("username").length >= 3 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="w-full text-muted-foreground hover:text-foreground"
+                            onClick={handleSkipImage}
+                            disabled={isUploadingLoading || isCreatingAccount}
+                          >
+                            Skip profile picture for now
+                          </Button>
+                        )}
+                      </div>
+                    </form>
+                  </Form>
+                )}
 
                 <p className="text-center text-sm text-muted-foreground mt-6">
                   Already have an account?{" "}

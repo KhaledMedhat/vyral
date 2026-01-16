@@ -1,6 +1,6 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
 import { ActiveUI, AppInitialState, FriendsView, MessageRequestsView } from "~/interfaces/app.interface";
-import { Channel, ChannelInitialState } from "~/interfaces/channels.interface";
+import { Channel, UpdateChannelBody } from "~/interfaces/channels.interface";
 
 const initialState: AppInitialState = {
   activeUI: ActiveUI.FRIENDS_LIST,
@@ -33,6 +33,16 @@ export const appSlice = createSlice({
     setCurrentChannel: (state, action: PayloadAction<Channel | null>) => {
       state.currentChannel = action.payload;
     },
+    updateCurrentChannel: (state, action: PayloadAction<Channel>) => {
+      if (state.currentChannel) {
+        if (action.payload.groupOrServerName !== undefined) {
+          state.currentChannel.groupOrServerName = action.payload.groupOrServerName;
+        }
+        if (action.payload.groupOrServerLogo !== undefined) {
+          state.currentChannel.groupOrServerLogo = action.payload.groupOrServerLogo;
+        }
+      }
+    },
   },
 });
 
@@ -43,5 +53,6 @@ export const {
   setDashboardMessageRequestsHeaderActiveUI,
   setShowChannelDetails,
   setCurrentChannel,
+  updateCurrentChannel,
 } = appSlice.actions;
 export default appSlice.reducer;

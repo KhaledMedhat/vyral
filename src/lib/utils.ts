@@ -1,7 +1,9 @@
 import { clsx, type ClassValue } from "clsx";
+import { Area } from "react-easy-crop";
 import { twMerge } from "tailwind-merge";
 import { getCookie } from "~/app/actions";
-import { Channel } from "~/interfaces/channels.interface";
+import { Channel, ChannelType } from "~/interfaces/channels.interface";
+import { FriendInterface, User } from "~/interfaces/user.interface";
 import { setUserLoggingInStatus } from "~/redux/slices/user/user-slice";
 import { store } from "~/redux/store";
 
@@ -68,3 +70,119 @@ export function getDirectMessageChannelOtherMember(channel: Channel, currentUser
   const otherMembers = channel.members.filter((member) => member._id !== currentUserId);
   return otherMembers[0];
 }
+
+/**
+ * Extract a direct channel from the current channels by the current user's ID and the friend's ID
+ * @param currentUserId - The current user's ID
+ * @param currentChannels - The current channels
+ * @param friendId - The friend's ID
+ * @returns The direct channel
+ */
+export function extractDirectChannelFromMembers(currentUserId: string, currentChannels: Channel[], friendId: string) {
+  const directChannel = currentChannels.find(
+    (channel) =>
+      channel.type === ChannelType.Direct &&
+      channel.members.some((member) => member._id === currentUserId) &&
+      channel.members.some((member) => member._id === friendId)
+  );
+  return directChannel;
+}
+
+/**
+ * Get the mutual friends of the current user and the friend
+ * @param currentUser - The current user
+ * @param friend - The friend
+ * @returns The mutual friends of the current user and the friend
+ */
+export function getMutualFriends(currentUser: User, friend: FriendInterface) {
+  return currentUser.friends.filter((f) => friend.friends.some((f2) => f2._id === f._id));
+}
+
+/**
+ * Get the mutual servers of the current user and the friend
+ * @param currentUserChannels - The current user's channels
+ * @param friend - The friend
+ * @returns The mutual servers of the current user and the friend
+ */
+export function getMutualServers(currentUserChannels: Channel[], friend: FriendInterface) {
+  return currentUserChannels.filter((c) => c.type === ChannelType.Server && c.members.some((m) => m._id === friend._id));
+}
+
+/**
+ * Check if the current user is a friend of the friend
+ * @param currentUser - The current user
+ * @param friend - The friend
+ * @returns True if the current user is a friend of the friend, false otherwise
+ */
+export function isTheUserFriend(currentUser: User, friendId: string) {
+  return currentUser.friends.some((f) => f._id === friendId);
+}
+
+/**
+ * Create a cropped image from a source image, cropped area, and rotation
+ * @param imageSrc - The source image URL
+ * @param croppedAreaPixels - The cropped area pixels
+ * @param rotation - The rotation angle in degrees (default: 0)
+ * @returns The cropped image file
+ */
+export const createCroppedImage = async (imageSrc: string, croppedAreaPixels: Area, rotation = 0): Promise<File> => {
+  const image = new Image();
+  image.src = imageSrc;
+  await new Promise((resolve) => (image.onload = resolve));
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    throw new Error("Could not get canvas context");
+  }
+
+  // Calculate the bounding box of the rotated image
+  const radians = (rotation * Math.PI) / 180;
+  const sin = Math.abs(Math.sin(radians));
+  const cos = Math.abs(Math.cos(radians));
+  const rotatedWidth = image.width * cos + image.height * sin;
+  const rotatedHeight = image.width * sin + image.height * cos;
+
+  // Create a temporary canvas for the rotated image
+  const rotatedCanvas = document.createElement("canvas");
+  const rotatedCtx = rotatedCanvas.getContext("2d");
+
+  if (!rotatedCtx) {
+    throw new Error("Could not get rotated canvas context");
+  }
+
+  rotatedCanvas.width = rotatedWidth;
+  rotatedCanvas.height = rotatedHeight;
+
+  // Rotate around the center
+  rotatedCtx.translate(rotatedWidth / 2, rotatedHeight / 2);
+  rotatedCtx.rotate(radians);
+  rotatedCtx.translate(-image.width / 2, -image.height / 2);
+  rotatedCtx.drawImage(image, 0, 0);
+
+  // Now crop from the rotated image
+  canvas.width = croppedAreaPixels.width;
+  canvas.height = croppedAreaPixels.height;
+
+  ctx.drawImage(
+    rotatedCanvas,
+    croppedAreaPixels.x,
+    croppedAreaPixels.y,
+    croppedAreaPixels.width,
+    croppedAreaPixels.height,
+    0,
+    0,
+    croppedAreaPixels.width,
+    croppedAreaPixels.height
+  );
+
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], "cropped-image.jpg", { type: "image/jpeg" });
+        resolve(file);
+      }
+    }, "image/jpeg");
+  });
+};

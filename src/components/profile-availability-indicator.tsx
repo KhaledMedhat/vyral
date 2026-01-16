@@ -10,7 +10,7 @@ const avatarVariants = cva("relative inline-block", {
       default: "size-10",
       md: "size-8",
       sm: "size-6.5",
-      lg: "size-12",
+      lg: "size-30",
     },
   },
   defaultVariants: {
@@ -24,7 +24,7 @@ const indicatorVariants = cva("absolute bottom-0 -right-1 rounded-full border-2 
       default: "size-4.5",
       md: "size-4",
       sm: "size-3.5",
-      lg: "size-6",
+      lg: "size-10",
     },
   },
   defaultVariants: {
@@ -38,7 +38,7 @@ const statusBadgeVariants = cva("", {
       default: "size-5",
       md: "size-3.5",
       sm: "size-3.5",
-      lg: "size-6",
+      lg: "size-10",
     },
   },
   defaultVariants: {

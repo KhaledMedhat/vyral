@@ -9,14 +9,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import ProfileAvailabilityIndicator from "~/components/profile-availability-indicator";
 import { Button } from "~/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "~/components/ui/dropdown-menu";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
@@ -25,19 +18,18 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/comp
 import { ActiveUI, FriendListPageInfo, FriendsView, MessageRequestsView } from "~/interfaces/app.interface";
 import { NestErrorResponse } from "~/interfaces/error.interface";
 import { FriendInterface, FriendRequestStatus, StatusType } from "~/interfaces/user.interface";
+import { extractDirectChannelFromMembers } from "~/lib/utils";
 import { sendFriendRequestSchema, SendFriendRequestValues } from "~/lib/validation";
-import {
-  useAcceptFriendRequestMutation,
-  useRejectFriendRequestMutation,
-  useRemoveFriendMutation,
-  useSendFriendRequestMutation,
-} from "~/redux/apis/user.api";
-import { useAppSelector } from "~/redux/hooks";
+import { useRemoveFriendMutation } from "~/redux/apis/auth.api";
+import { useAcceptFriendRequestMutation, useRejectFriendRequestMutation, useSendFriendRequestMutation } from "~/redux/apis/user.api";
+import { useAppDispatch, useAppSelector } from "~/redux/hooks";
 import { selectActiveUI, selectDashboardFriendsHeaderActiveUI, selectDashboardMessageRequestsHeaderActiveUI } from "~/redux/slices/app/app-selector";
-import { selectCurrentUserInfo, selectFriendRequests } from "~/redux/slices/user/user-selector";
+import { setActiveUI, setCurrentChannel } from "~/redux/slices/app/app-slice";
+import { selectCurrentUserChannels, selectCurrentUserInfo, selectFriendRequests } from "~/redux/slices/user/user-selector";
 
 export default function ChannelsPage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [search, setSearch] = useState<string>("");
   const [removeFriend, { isLoading: isRemovingFriend }] = useRemoveFriendMutation();
   const [sendFriendRequest, { isLoading: isSendingFriendRequest }] = useSendFriendRequestMutation();
@@ -47,6 +39,7 @@ export default function ChannelsPage() {
   const friendsHeaderActiveUI = useAppSelector(selectDashboardFriendsHeaderActiveUI);
   const messageRequestsHeaderActiveUI = useAppSelector(selectDashboardMessageRequestsHeaderActiveUI);
   const currentUserInfo = useAppSelector(selectCurrentUserInfo);
+  const currentUserChannels = useAppSelector(selectCurrentUserChannels);
   const friendRequests = useAppSelector(selectFriendRequests);
   const onlineFriends = currentUserInfo.friends.filter((friend) => friend.status.type === StatusType.Online);
   const sendFriendRequestForm = useForm<SendFriendRequestValues>({
@@ -78,7 +71,16 @@ export default function ChannelsPage() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              onClick={() => router.push(`/dm/${friendId}`)}
+              onClick={() => {
+                const directChannel = extractDirectChannelFromMembers(currentUserInfo._id, currentUserChannels, friendId);
+                if (directChannel) {
+                  dispatch(setCurrentChannel(directChannel));
+                  dispatch(setActiveUI(ActiveUI.DIRECT_MESSAGES));
+                  router.push(`/dm/${directChannel._id}`);
+                } else {
+                  toast.error("Channel is not found");
+                }
+              }}
               variant="ghost"
               size="icon"
               className="rounded-full hover:bg-background text-muted-foreground"
@@ -102,7 +104,7 @@ export default function ChannelsPage() {
               <DropdownMenuContent>
                 <DropdownMenuItem>Start Video Call</DropdownMenuItem>
                 <DropdownMenuItem>Start Voice Call</DropdownMenuItem>
-                <DropdownMenuItem variant="destructive" onClick={async () => await removeFriend(friendId)}>
+                <DropdownMenuItem variant="destructive" onClick={async () => await removeFriend({ friendId })}>
                   Remove Friend
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -220,33 +222,30 @@ export default function ChannelsPage() {
           </p>
           <Table>
             <TableBody>
-              {friendListPageInfo.items.map((friend, index) => {
-                console.log("Rendering friend:", friend._id, friend);
-                return (
-                  <TableRow key={friend._id} className="justify-between flex items-center group/friend border-t!">
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <ProfileAvailabilityIndicator
-                          status={friendListPageInfo.showStatus ? friend.status.type : undefined}
-                          imageUrl={friend.profilePicture}
-                          name={friend.displayName}
-                          size="md"
-                        />
-                        <div className="flex flex-col itmes-start">
-                          <div className="flex items-center gap-1">
-                            <p className="font-semibold text-sm">{friend.displayName}</p>
-                            <p className="text-xs text-muted-foreground group-hover/friend:block hidden">{friend.username}</p>
-                          </div>
-                          <p className="text-xs font-semibold text-muted-foreground">
-                            {friendListPageInfo.showStatus ? friend.status.type : friend.username}
-                          </p>
+              {friendListPageInfo.items.map((friend, index) => (
+                <TableRow key={friend._id} className="justify-between flex items-center group/friend border-t!">
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <ProfileAvailabilityIndicator
+                        status={friendListPageInfo.showStatus ? friend.status.type : undefined}
+                        imageUrl={friend.profilePicture}
+                        name={friend.displayName}
+                        size="md"
+                      />
+                      <div className="flex flex-col itmes-start">
+                        <div className="flex items-center gap-1">
+                          <p className="font-semibold text-sm">{friend.displayName}</p>
+                          <p className="text-xs text-muted-foreground group-hover/friend:block hidden">{friend.username}</p>
                         </div>
+                        <p className="text-xs font-semibold text-muted-foreground">
+                          {friendListPageInfo.showStatus ? friend.status.type : friend.username}
+                        </p>
                       </div>
-                    </TableCell>
-                    <TableCell className="gap-1 flex items-center">{mountButtons(friend._id, friendListPageInfo.requestIds[index] ?? "")}</TableCell>
-                  </TableRow>
-                );
-              })}
+                    </div>
+                  </TableCell>
+                  <TableCell className="gap-1 flex items-center">{mountButtons(friend._id, friendListPageInfo.requestIds[index] ?? "")}</TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </>

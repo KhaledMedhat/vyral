@@ -1,6 +1,8 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { Channel, CreateChannelBody, CreateChannelResponse } from "~/interfaces/channels.interface";
+import { Channel, CreateChannelBody, CreateChannelResponse, UpdateChannelBody } from "~/interfaces/channels.interface";
 import { authApi } from "./auth.api";
+import { Message } from "~/interfaces/message.interface";
+import { updateCurrentChannel } from "../slices/app/app-slice";
 
 export const channelApi = createApi({
   reducerPath: "channelApi",
@@ -22,14 +24,30 @@ export const channelApi = createApi({
         dispatch(authApi.util.invalidateTags(["Auth"]));
       },
     }),
-    updateChannelActiveList: builder.mutation<Channel, { channelId: string; memberId: string }>({
-      query: (args) => ({
-        url: `/channels/update-member-list-active/${args.channelId}/${args.memberId}`,
+    leaveGroupChannel: builder.mutation<void, string>({
+      query: (channelId) => ({
+        url: `/channels/leave-group-channel/${channelId}`,
         method: "PATCH",
       }),
-      invalidatesTags: ["Channel"],
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        await queryFulfilled;
+        dispatch(authApi.util.invalidateTags(["Auth"]));
+      },
+    }),
+    updateChannel: builder.mutation<Channel, { channelId: string; updateChannelDto: UpdateChannelBody }>({
+      query: (body) => ({
+        url: `/channels/update-channel/${body.channelId}`,
+        method: "PATCH",
+        body: body.updateChannelDto,
+      }),
+    }),
+    getChannelMessages: builder.query<Message[], string>({
+      query: (referenceId) => ({
+        url: `/messages/get-messages/${referenceId}`,
+        method: "GET",
+      }),
     }),
   }),
 });
 
-export const { useCreateChannelMutation, useUpdateChannelActiveListMutation } = channelApi;
+export const { useCreateChannelMutation, useLeaveGroupChannelMutation, useGetChannelMessagesQuery, useUpdateChannelMutation } = channelApi;

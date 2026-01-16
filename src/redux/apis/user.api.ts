@@ -55,19 +55,7 @@ export const userApi = createApi({
         }
       },
     }),
-    removeFriend: builder.mutation<void, string>({
-      query: (friendId) => ({
-        url: `/user/remove-friend/${friendId}`,
-        method: "DELETE",
-      }),
-    }),
   }),
 });
 
-export const {
-  useSearchUsersMutation,
-  useRemoveFriendMutation,
-  useSendFriendRequestMutation,
-  useAcceptFriendRequestMutation,
-  useRejectFriendRequestMutation,
-} = userApi;
+export const { useSearchUsersMutation, useSendFriendRequestMutation, useAcceptFriendRequestMutation, useRejectFriendRequestMutation } = userApi;

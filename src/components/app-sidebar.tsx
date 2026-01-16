@@ -29,7 +29,7 @@ import Image from "next/image";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createServerSchema, CreateServerValues, invitationServerJoinSchema, InvitationServerJoinValues } from "~/lib/validation";
@@ -37,7 +37,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "./ui/input";
 import useUpload from "~/hooks/use-upload";
 import { ActiveUI, ConfigPrefix, FriendsSelectorView } from "~/interfaces/app.interface";
-import { useCreateChannelMutation, useUpdateChannelActiveListMutation } from "~/redux/apis/channel.api";
+import { useCreateChannelMutation, useLeaveGroupChannelMutation } from "~/redux/apis/channel.api";
 import { Channel, ChannelType } from "~/interfaces/channels.interface";
 import { toast } from "sonner";
 import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
@@ -54,34 +54,39 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./
 import FriendsSelector from "./friends-selector";
 import { setActiveUI, setCurrentChannel } from "~/redux/slices/app/app-slice";
 import { selectActiveUI, selectSidebarOpen } from "~/redux/slices/app/app-selector";
-import { getDirectMessageChannelOtherMember, getInitialsFallback } from "~/lib/utils";
+import { extractDirectChannelFromMembers, getInitialsFallback } from "~/lib/utils";
+import { setChannelListActive } from "~/redux/slices/user/user-slice";
 import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuTrigger,
-} from "./ui/context-menu";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
+import ChannelSharedContextMenu from "./channel-shared-context-menu";
+import { ImageCropperInline } from "./image-cropper";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [openAddServerDialog, setOpenAddServerDialog] = useState<boolean>(false);
   const [isUploadingLoading, setIsUploadingLoading] = useState<boolean>(false);
   const [step, setStep] = useState<number>(2);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [isCropping, setIsCropping] = useState<boolean>(false);
+  const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
   const [search, setSearch] = useState<string>("");
   const router = useRouter();
   const dispatch = useAppDispatch();
   const activeUI = useAppSelector(selectActiveUI);
   const currentUserInfo = useAppSelector(selectCurrentUserInfo);
   const currentChannels = useAppSelector(selectCurrentUserChannels);
-  console.log(currentChannels);
   const sidebarOpen = useAppSelector(selectSidebarOpen);
   const [createChannel, { isLoading: isCreatingChannel }] = useCreateChannelMutation();
-  const [updateChannelActiveList] = useUpdateChannelActiveListMutation();
   const [searchUsers, { data: usersQuery }] = useSearchUsersMutation();
+  const [leaveGroupChannel, { isLoading: isLeavingGroupChannelLoading }] = useLeaveGroupChannelMutation();
+  const [leavingGroupChannelId, setLeavingGroupChannelId] = useState<string | null>(null);
   const { startUpload } = useUpload(setIsUploadingLoading, ConfigPrefix.SINGLE_IMAGE_UPLOADER);
 
   const secondSidebarButtons = [
@@ -106,14 +111,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   ];
 
   const mountDmOrGroupChannelFinder = (channel: Channel) => {
-    const otherMember = getDirectMessageChannelOtherMember(channel, currentUserInfo._id);
     switch (channel.type) {
       case ChannelType.Direct:
         return {
-          route: `/dm/${otherMember?._id}`,
-          imageUrl: otherMember?.profilePicture || "",
-          name: otherMember?.displayName || "",
-          fallbackName: getInitialsFallback(otherMember?.displayName),
+          route: `/dm/${channel.directChannelOtherMember?._id}`,
+          imageUrl: channel.directChannelOtherMember?.profilePicture || "",
+          name: channel.directChannelOtherMember?.displayName || "",
+          fallbackName: getInitialsFallback(channel.directChannelOtherMember?.displayName),
         };
       case ChannelType.Group:
         return {
@@ -150,7 +154,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         startUpload([data.serverImage]).then(async (res) => {
           if (res && res[0]) {
             await createChannel({
-              members: [{ ...currentUserInfo }],
+              members: [currentUserInfo._id],
               groupOrServerLogo: res[0].ufsUrl,
               groupOrServerName: data.serverName,
               type: ChannelType.Server,
@@ -164,7 +168,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         });
       } else {
         await createChannel({
-          members: [{ ...currentUserInfo }],
+          members: [currentUserInfo._id],
           groupOrServerLogo: undefined,
           groupOrServerName: data.serverName,
           type: ChannelType.Server,
@@ -186,14 +190,37 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      createServer.setValue("serverImage", file);
       const reader = new FileReader();
       reader.onloadend = () => {
         const imageUrl = reader.result as string;
-        setProfileImageUrl(imageUrl);
+        setOriginalImageUrl(imageUrl);
+        setIsCropping(true);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCropCancel = () => {
+    setIsCropping(false);
+    setOriginalImageUrl(null);
+  };
+
+  const handleCropApply = (croppedFile: File) => {
+    createServer.setValue("serverImage", croppedFile);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfileImageUrl(reader.result as string);
+    };
+    reader.readAsDataURL(croppedFile);
+
+    setIsCropping(false);
+    setOriginalImageUrl(null);
+  };
+
+  const handleLogoPress = () => {
+    router.push(`/channels/${currentUserInfo.channelSlug}`);
+    dispatch(setActiveUI(ActiveUI.FRIENDS_LIST));
   };
   return (
     <Sidebar collapsible="icon" className="overflow-hidden relative *:data-[sidebar=sidebar]:flex-row" {...props}>
@@ -211,13 +238,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarHeader className="p-0">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => router.push(`/channels/${currentUserInfo.channelSlug}`)}
-                isActive={true}
-                size="lg"
-                className="relative items-center"
-              >
-                <Image src="/vyral-short-logo.svg" alt="PÀO" fill className="object-cover" />
+              <SidebarMenuButton onClick={() => handleLogoPress()} isActive={true} size="lg" className="relative items-center rounded-sm!">
+                <Image src="/vyral-short-logo.svg" alt="PÀO" fill className="object-cover pl-1 pb-0.5" />
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -386,65 +408,69 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     right: 0,
                   }}
                 >
-                  <Form {...createServer}>
-                    <form id="create-server-form" onSubmit={createServer.handleSubmit(onCreateServerSubmit)} className="space-y-6">
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="relative group mt-4">
-                          {profileImageUrl && (
-                            <Button
-                              variant="destructive"
-                              size="icon-sm"
-                              className="absolute top-0 right-0 rounded-full z-10"
-                              onClick={(e) => {
-                                setProfileImageUrl(null);
-                                createServer.setValue("serverImage", undefined);
-                              }}
-                            >
-                              <IconX className="size-4" />
-                            </Button>
-                          )}
-                          <div
-                            className={`w-28 h-28 rounded-full border-2 border-dashed border-border flex items-center justify-center overflow-hidden transition-all group-hover:border-accent ${
-                              profileImageUrl ? "border-solid border-accent" : ""
-                            }`}
-                          >
-                            {profileImageUrl ? (
-                              <img src={profileImageUrl || "/placeholder.svg"} alt="Profile" className="w-full h-full object-cover" />
-                            ) : (
-                              <IconPhotoPlus stroke={2} className="h-8 w-8 text-muted-foreground group-hover:text-accent transition-colors" />
+                  {isCropping && originalImageUrl ? (
+                    <ImageCropperInline imageUrl={originalImageUrl} onApply={handleCropApply} onCancel={handleCropCancel} title="Crop Server Image" />
+                  ) : (
+                    <Form {...createServer}>
+                      <form id="create-server-form" onSubmit={createServer.handleSubmit(onCreateServerSubmit)} className="space-y-6">
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="relative group mt-4">
+                            {profileImageUrl && (
+                              <Button
+                                variant="destructive"
+                                size="icon-sm"
+                                className="absolute top-0 right-0 rounded-full z-10"
+                                onClick={(e) => {
+                                  setProfileImageUrl(null);
+                                  createServer.setValue("serverImage", undefined);
+                                }}
+                              >
+                                <IconX className="size-4" />
+                              </Button>
                             )}
+                            <div
+                              className={`w-28 h-28 rounded-full border-2 border-dashed border-border flex items-center justify-center overflow-hidden transition-all group-hover:border-accent ${
+                                profileImageUrl ? "border-solid border-accent" : ""
+                              }`}
+                            >
+                              {profileImageUrl ? (
+                                <img src={profileImageUrl || "/placeholder.svg"} alt="Profile" className="w-full h-full object-cover" />
+                              ) : (
+                                <IconPhotoPlus stroke={2} className="h-8 w-8 text-muted-foreground group-hover:text-accent transition-colors" />
+                              )}
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
                           </div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                          />
+                          <p className="text-sm text-muted-foreground">Click to upload a profile picture (optional)</p>
                         </div>
-                        <p className="text-sm text-muted-foreground">Click to upload a profile picture (optional)</p>
-                      </div>
 
-                      <FormField
-                        control={createServer.control}
-                        name="serverName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="uppercase font-semibold text-xs">Server Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder={`${currentUserInfo.displayName}'s Server`} type="text" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            <FormDescription className="text-xs">
-                              By creating a server, you agree to PÀO's{" "}
-                              <Link href="/terms" className="text-accent hover:underline font-semibold">
-                                Community Guidelines
-                              </Link>
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-                    </form>
-                  </Form>
+                        <FormField
+                          control={createServer.control}
+                          name="serverName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="uppercase font-semibold text-xs">Server Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder={`${currentUserInfo.displayName}'s Server`} type="text" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                              <FormDescription className="text-xs">
+                                By creating a server, you agree to PÀO's{" "}
+                                <Link href="/terms" className="text-accent hover:underline font-semibold">
+                                  Community Guidelines
+                                </Link>
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+                      </form>
+                    </Form>
+                  )}
                 </div>
               </div>
               <DialogFooter className="justify-center! relative overflow-hidden">
@@ -480,9 +506,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <div
                   className="flex items-center justify-between w-full transition-all duration-500 ease-in-out"
                   style={{
-                    transform: step === 3 ? "translateX(0)" : "translateX(100%)",
-                    opacity: step === 3 ? 1 : 0,
-                    position: step === 3 ? "relative" : "absolute",
+                    transform: step === 3 && !isCropping ? "translateX(0)" : "translateX(100%)",
+                    opacity: step === 3 && !isCropping ? 1 : 0,
+                    position: step === 3 && !isCropping ? "relative" : "absolute",
                     top: 0,
                     left: 0,
                     right: 0,
@@ -505,6 +531,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
           <SidebarMenuButton
             isActive={true}
             tooltip={{
@@ -657,28 +684,32 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             ))}
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarContent>
+        <SidebarContent className="overflow-hidden">
           <SidebarSeparator />
           <div className="flex items-center justify-between w-full px-2">
             <p className="text-sm font-semibold text-muted-foreground">Direct Messages</p>
             <FriendsSelector friends={currentUserInfo.friends} currentUser={currentUserInfo} view={FriendsSelectorView.SIDEBAR} />
           </div>
-          <ScrollArea className="h-full pl-2">
-            {currentChannels.length > 0 &&
-              currentChannels
-                .filter((channel) => channel && channel.type !== ChannelType.Server)
-                .map((channel) => {
-                  const otherMember = getDirectMessageChannelOtherMember(channel, currentUserInfo._id);
-                  return (
-                    <ContextMenu key={channel._id}>
-                      <ContextMenuTrigger asChild>
+          <ScrollArea className="h-full max-w-full">
+            <div className="flex flex-col pr-2 pl-2">
+              {currentChannels.length > 0 &&
+                currentChannels
+                  .filter((channel) => channel && ((channel.type === ChannelType.Direct && channel.listActive) || channel.type === ChannelType.Group))
+                  .map((channel) => {
+                    const extractedDirectMessageChannel = extractDirectChannelFromMembers(
+                      currentUserInfo._id,
+                      currentChannels,
+                      channel.directChannelOtherMember?._id || ""
+                    );
+                    return (
+                      <ChannelSharedContextMenu key={channel._id} channel={channel}>
                         <Link
-                          href={channel.type === ChannelType.Direct ? `/dm/${otherMember?._id}` : `/group/${channel._id}`}
-                          className="w-full group/channel"
+                          href={channel.type === ChannelType.Direct ? `/dm/${extractedDirectMessageChannel?._id}` : `/group/${channel._id}`}
+                          className="max-w-full group/channel"
                         >
                           <Button
                             variant="ghost"
-                            className="flex items-center justify-between gap-2 w-full h-11"
+                            className={`flex items-center w-full justify-between gap-2  ${channel.type === ChannelType.Group ? "mt-1 h-12" : "h-11"}`}
                             onClick={() => {
                               dispatch(setCurrentChannel(channel));
                               channel.type === ChannelType.Direct
@@ -686,20 +717,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 : dispatch(setActiveUI(ActiveUI.GROUP));
                             }}
                           >
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
                               <ProfileAvailabilityIndicator
-                                status={channel.type === ChannelType.Direct ? otherMember?.status?.type : undefined}
-                                imageUrl={channel.type === ChannelType.Direct ? otherMember?.profilePicture || "" : channel.groupOrServerLogo || ""}
-                                name={channel.type === ChannelType.Direct ? otherMember?.displayName || "" : channel.groupOrServerName || ""}
+                                status={channel.type === ChannelType.Direct ? channel.directChannelOtherMember?.status?.type : undefined}
+                                imageUrl={
+                                  channel.type === ChannelType.Direct
+                                    ? channel.directChannelOtherMember?.profilePicture || ""
+                                    : channel.groupOrServerLogo || ""
+                                }
+                                name={
+                                  channel.type === ChannelType.Direct
+                                    ? channel.directChannelOtherMember?.displayName || ""
+                                    : channel.groupOrServerName || ""
+                                }
                                 size="md"
-                                className="pt-1"
+                                className="pt-1 shrink-0"
                               />
-                              <div className="flex flex-col itmes-start">
-                                <div className="flex items-center gap-1">
-                                  <p className="font-semibold text-sm text-muted-foreground">
-                                    {channel.type === ChannelType.Direct ? otherMember?.displayName || "" : channel.groupOrServerName || ""}
-                                  </p>
-                                </div>
+                              <div className="flex flex-col items-start min-w-0 flex-1">
+                                <p className="font-semibold text-sm text-muted-foreground truncate max-w-[150px]">
+                                  {channel.type === ChannelType.Direct
+                                    ? channel.directChannelOtherMember?.displayName || ""
+                                    : channel.groupOrServerName || ""}
+                                </p>
                                 {channel.type === ChannelType.Group && (
                                   <Badge variant="outline" className="text-xs text-muted-foreground">
                                     Group
@@ -709,61 +748,67 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             </div>
                             <div
                               className="cursor-pointer hidden group-hover/channel:block bg-muted-foreground/10 rounded-full p-1 hover:bg-main"
-                              onClick={async (e) => {
+                              onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 if (channel.type === ChannelType.Direct) {
-                                  await updateChannelActiveList({ channelId: channel._id, memberId: currentUserInfo._id });
+                                  dispatch(setChannelListActive({ channelId: channel._id, listActive: false }));
                                 } else {
+                                  setLeavingGroupChannelId(channel._id);
                                 }
-                                console.log("delete channel");
                               }}
                             >
                               <IconX size={14} className="text-muted-foreground" />
                             </div>
                           </Button>
                         </Link>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent className="w-44">
-                        <ContextMenuItem disabled>Mark As Read</ContextMenuItem>
-                        <ContextMenuSeparator />
-                        <ContextMenuItem>Profile</ContextMenuItem>
-                        <ContextMenuItem>Call</ContextMenuItem>
-                        <ContextMenuItem>Close DM</ContextMenuItem>
-                        <ContextMenuSeparator />
-                        <ContextMenuSub>
-                          <ContextMenuSubTrigger>Invite to Server</ContextMenuSubTrigger>
-                          <ContextMenuSubContent className="w-44">
-                            <ContextMenuItem>Save Page...</ContextMenuItem>
-                            <ContextMenuItem>Create Shortcut...</ContextMenuItem>
-                            <ContextMenuItem>Name Window...</ContextMenuItem>
-                            <ContextMenuItem>Developer Tools</ContextMenuItem>
-                          </ContextMenuSubContent>
-                        </ContextMenuSub>
-                        <ContextMenuItem variant="destructive">Remove Friend</ContextMenuItem>
-                        <ContextMenuSeparator />
-                        <ContextMenuSub>
-                          <ContextMenuSubTrigger>Mute</ContextMenuSubTrigger>
-                          <ContextMenuSubContent className="w-44">
-                            <ContextMenuItem>Save Page...</ContextMenuItem>
-                            <ContextMenuItem>Create Shortcut...</ContextMenuItem>
-                            <ContextMenuItem>Name Window...</ContextMenuItem>
-                            <ContextMenuItem>Developer Tools</ContextMenuItem>
-                          </ContextMenuSubContent>
-                        </ContextMenuSub>
-                        <ContextMenuSeparator />
-                        <ContextMenuItem className="justify-between">
-                          Copy User ID <IconIdBadge />
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
-                  );
-                })}
+                      </ChannelSharedContextMenu>
+                    );
+                  })}
+            </div>
           </ScrollArea>
+
+          {/* Alert dialog for leaving group channel - rendered once outside the loop */}
+          <AlertDialog open={!!leavingGroupChannelId} onOpenChange={(open) => !open && setLeavingGroupChannelId(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Leave {currentChannels.find((c) => c._id === leavingGroupChannelId)?.groupOrServerName || ""} Group?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to leave{" "}
+                  <span className="font-semibold">{currentChannels.find((c) => c._id === leavingGroupChannelId)?.groupOrServerName || ""}</span>{" "}
+                  group? You won't be able to rejoin this group unless you are re-invited.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="bg-secondary text-secondary-foreground hover:bg-secondary/80">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-white hover:bg-destructive/90"
+                  onClick={async () => {
+                    if (leavingGroupChannelId) {
+                      await leaveGroupChannel(leavingGroupChannelId);
+                      setLeavingGroupChannelId(null);
+                    }
+                  }}
+                >
+                  {isLeavingGroupChannelLoading ? (
+                    <>
+                      <Spinner />
+                      Leaving Group...
+                    </>
+                  ) : (
+                    "Leave Group"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </SidebarContent>
-        <SidebarFooter></SidebarFooter>
       </Sidebar>
       <UserNavigator />
     </Sidebar>
   );
 }
+
+// context menu for each channel

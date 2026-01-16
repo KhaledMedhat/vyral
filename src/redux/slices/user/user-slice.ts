@@ -76,11 +76,19 @@ export const userSlice = createSlice({
     setUpdatedFriend: (state, action: PayloadAction<FriendInterface>) => {
       state.userInfo.friends = state.userInfo.friends.map((friend) => (friend._id === action.payload._id ? action.payload : friend));
     },
+    setChannelListActive: (state, action: PayloadAction<{ channelId: string; listActive: boolean }>) => {
+      state.channelsInfo = state.channelsInfo.map((channel) =>
+        channel._id === action.payload.channelId ? { ...channel, listActive: action.payload.listActive } : channel
+      );
+    },
     setUserLoggingInStatus: (state, action: PayloadAction<boolean>) => {
       state.isLoggedIn = action.payload;
     },
     setChannels: (state, action: PayloadAction<Channel[]>) => {
       state.channelsInfo = action.payload;
+    },
+    updateChannel: (state, action: PayloadAction<Channel>) => {
+      state.channelsInfo = state.channelsInfo.map((channel) => (channel._id === action.payload._id ? { ...channel, ...action.payload } : channel));
     },
     addChannel: (state, action: PayloadAction<Channel>) => {
       if (!state.channelsInfo.some((channel) => channel._id === action.payload._id)) {
@@ -120,11 +128,13 @@ export const {
   setUserInfo,
   setUpdatedFriend,
   setChannels,
+  updateChannel,
   setFriendRequests,
   addFriendRequest,
   removeFriendRequest,
   setChannelActiveList,
   addChannel,
   addNotification,
+  setChannelListActive,
 } = userSlice.actions;
 export default userSlice.reducer;

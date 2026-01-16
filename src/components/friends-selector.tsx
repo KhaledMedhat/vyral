@@ -1,27 +1,24 @@
 import { MAX_FRIENDS, SHORT_LOGO_URL } from "~/constants/constants";
 import { Button } from "./ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { ScrollArea } from "./ui/scroll-area";
 import { Checkbox } from "./ui/checkbox";
 import { Tag, TagInput } from "./ui/tag-input";
-import { useId, useMemo, useState } from "react";
+import { useId, useState } from "react";
 import { FriendInterface, User } from "~/interfaces/user.interface";
-import { toast } from "sonner";
-import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
-import { NestErrorResponse } from "~/interfaces/error.interface";
 import { useRouter } from "next/navigation";
 import { createChannelName } from "~/lib/utils";
 import { useCreateChannelMutation } from "~/redux/apis/channel.api";
 import { ChannelType } from "~/interfaces/channels.interface";
 import ProfileAvailabilityIndicator from "./profile-availability-indicator";
-import { IconLoader, IconMessageCirclePlus, IconPlus, IconUserPlus } from "@tabler/icons-react";
+import { IconMessageCirclePlus, IconPlus } from "@tabler/icons-react";
 import { SidebarMenuButton } from "./ui/sidebar";
 import { Spinner } from "./ui/spinner";
-import { FriendsSelectorView } from "~/interfaces/app.interface";
+import { ActiveUI, FriendsSelectorView } from "~/interfaces/app.interface";
 import { useAppDispatch, useAppSelector } from "~/redux/hooks";
 import { selectCurrentUserChannels } from "~/redux/slices/user/user-selector";
-import { setCurrentChannel } from "~/redux/slices/app/app-slice";
+import { setActiveUI, setCurrentChannel } from "~/redux/slices/app/app-slice";
+import { setChannelListActive } from "~/redux/slices/user/user-slice";
 
 const FriendsSelector: React.FC<{ friends: FriendInterface[]; currentUser: User; view: FriendsSelectorView; otherUser?: FriendInterface[] }> = ({
   friends,
@@ -96,59 +93,29 @@ const FriendsSelector: React.FC<{ friends: FriendInterface[]; currentUser: User;
 
     setSelectedFriends(newSelectedFriends);
   };
-  // const handleCreateDM = async () => {
-  //   try {
-  //     await createChannel({
-  //       members: isSidebarDisplay
-  //         ? [
-  //             ...selectedFriends.map((friend) => ({ id: friend._id, listActive: true })),
-  //             { id: currentUser._id, listActive: true },
-  //             ...(otherUser?.map((user) => ({ id: user._id, listActive: true })) ?? []),
-  //           ]
-  //         : [...selectedFriends.map((friend) => ({ id: friend._id, listActive: true })), { id: currentUser._id, listActive: true }],
-  //       createdBy: selectedFriends.length > 1 || isSidebarDisplay ? currentUser._id : undefined,
-  //       groupOrServerLogo: selectedFriends.length > 1 || isSidebarDisplay ? SHORT_LOGO_URL : undefined,
-  //       type: selectedFriends.length !== 1 || isSidebarDisplay ? ChannelType.Group : ChannelType.Direct,
-  //       groupOrServerName:
-  //         selectedFriends.length > 1 || isSidebarDisplay
-  //           ? createChannelName([
-  //               currentUser.displayName,
-  //               ...selectedFriends.map((friend) => friend.displayName),
-  //               ...(otherUser?.map((user) => user.displayName) || []),
-  //             ])
-  //           : undefined,
-  //     })
-  //       .unwrap()
-  //       .then((res) => {
-  //         router.push(`/${res.data.type === ChannelType.Group ? "groups" : "dm"}/${res.data.route}`);
-  //         setSelectedFriends([]);
-  //         setOpenPopover(false);
-  //       });
-  //   } catch (error) {
-  //     const errData = (error as FetchBaseQueryError).data as NestErrorResponse;
-  //     toast.error("Oops, something went wrong!", {
-  //       description: errData?.message || "An unexpected error occurred",
-  //     });
-  //   }
-  // };
 
   const handleCreateDM = async () => {
     if (selectedFriends.length === 1) {
       const directedChannel = currentUserChannels.find((channel) => channel.members.some((member) => member._id === selectedFriends[0]._id));
+      dispatch(setChannelListActive({ channelId: directedChannel?._id || "", listActive: true }));
       router.push(`/dm/${selectedFriends[0]._id}`);
       directedChannel && dispatch(setCurrentChannel(directedChannel));
+      dispatch(setActiveUI(ActiveUI.DIRECT_MESSAGES));
       setOpenPopover(false);
+      setSelectedFriends([]);
     } else {
       await createChannel({
-        members: [...selectedFriends.map((friend) => ({ ...friend })), { ...currentUser }],
+        members: [...selectedFriends.map((friend) => friend._id), currentUser._id],
         groupOrServerLogo: SHORT_LOGO_URL,
         type: ChannelType.Group,
         groupOrServerName: createChannelName([currentUser.displayName, ...selectedFriends.map((friend) => friend.displayName)]),
       })
         .unwrap()
         .then((res) => {
-          router.push(`/groups/${res.data.route}`);
+          router.push(`/group/${res.data.route}`);
           dispatch(setCurrentChannel(res.data.channel));
+          dispatch(setActiveUI(ActiveUI.GROUP));
+          setSelectedFriends([]);
           setOpenPopover(false);
         });
     }

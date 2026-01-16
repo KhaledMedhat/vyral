@@ -8,7 +8,7 @@ export enum ChannelType {
 }
 
 export interface CreateChannelBody {
-  members: FriendInterface[];
+  members: string[];
   groupOrServerName?: string;
   groupOrServerLogo?: string;
   type: ChannelType;
@@ -37,6 +37,7 @@ export interface CreateChannelResponse {
 export interface Channel {
   _id: string;
   members: FriendInterface[];
+  directChannelOtherMember?: FriendInterface;
   listActive?: boolean;
   updatedAt?: Date;
   type: ChannelType;

@@ -21,9 +21,12 @@ import {
   setFriendRequests,
   setUserInfo,
   setUserLoggingInStatus,
+  updateChannel,
 } from "~/redux/slices/user/user-slice";
 import { Channel, ChannelType } from "~/interfaces/channels.interface";
 import { socketService } from "~/lib/socket";
+import { getDirectMessageChannelOtherMember } from "~/lib/utils";
+import { updateCurrentChannel } from "../slices/app/app-slice";
 
 function isHydrateAction(action: Action): action is PayloadAction<RootState> {
   return action.type === HYDRATE;
@@ -82,6 +85,14 @@ export const authApi = createApi({
       }),
       invalidatesTags: ["Auth"],
     }),
+
+    removeFriend: builder.mutation<void, { friendId: string }>({
+      query: (data) => ({
+        url: `/user/remove-friend/${data.friendId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Auth"],
+    }),
     getUserInfo: builder.query<{ user: User; channels: Channel[]; notifications: Notification[]; friendRequests: FriendRequest[] }, void>({
       query: () => ({
         url: "/auth/get-profile",
@@ -90,22 +101,22 @@ export const authApi = createApi({
       async onQueryStarted(_, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("data", data);
           // Add listActive: true to each member in channels
-          const channelsWithListActive = data.channels.map((channel) => ({
+          const channelsWithListActiveAndExtractedOtherMember = data.channels.map((channel) => ({
             ...channel,
             listActive: channel.type === ChannelType.Direct ? true : undefined,
+            directChannelOtherMember: channel.type === ChannelType.Direct ? getDirectMessageChannelOtherMember(channel, data.user._id) : undefined,
           }));
           dispatch(setUserLoggingInStatus(true));
           dispatch(setUserInfo(data.user));
-          dispatch(setChannels(channelsWithListActive));
+          dispatch(setChannels(channelsWithListActiveAndExtractedOtherMember));
           // dispatch(setNotifications(data.notifications));
           dispatch(setFriendRequests(data.friendRequests));
         } catch {
           dispatch(setUserLoggingInStatus(false));
         }
       },
-      async onCacheEntryAdded(_, { dispatch, cacheDataLoaded, cacheEntryRemoved }) {
+      async onCacheEntryAdded(_, { dispatch, cacheDataLoaded, cacheEntryRemoved, getState }) {
         try {
           await cacheDataLoaded;
           const socket = await socketService.initialize();
@@ -113,22 +124,40 @@ export const authApi = createApi({
             dispatch(addFriendRequest(data.friendRequest));
           };
           const handleFriendRequestAcceptanceForChannel = (data: { channel: Channel }) => {
-            const channelsWithListActive = {
+            const state = getState() as RootState;
+            const currentUserId = state.user.userInfo._id;
+            const channelWithExtras = {
               ...data.channel,
               listActive: data.channel.type === ChannelType.Direct ? true : undefined,
+              directChannelOtherMember:
+                data.channel.type === ChannelType.Direct ? getDirectMessageChannelOtherMember(data.channel, currentUserId) : undefined,
             };
-            dispatch(addChannel(channelsWithListActive));
+            dispatch(addChannel(channelWithExtras));
           };
           const handleFriendRequestAcceptanceForNotification = (data: { notification: Notification }) => {
             dispatch(addNotification(data.notification));
           };
+
+          const handleChannelUpdate = (data: { channel: Channel }) => {
+            const state = getState() as RootState;
+            const currentUserId = state.user.userInfo._id;
+            const channelWithExtras = {
+              ...data.channel,
+              directChannelOtherMember:
+                data.channel.type === ChannelType.Direct ? getDirectMessageChannelOtherMember(data.channel, currentUserId) : undefined,
+            };
+            dispatch(updateChannel(channelWithExtras));
+            dispatch(updateCurrentChannel(channelWithExtras));
+          };
           socket?.on("friendRequest", handleFriendRequest);
           socket?.on("friendRequestAcceptanceChannelCreation", handleFriendRequestAcceptanceForChannel);
           socket?.on("friendRequestAcceptanceNotification", handleFriendRequestAcceptanceForNotification);
+          socket?.on("updateGroupChannel", handleChannelUpdate);
           await cacheEntryRemoved;
           socket?.off("friendRequest", handleFriendRequest);
           socket?.off("friendRequestAcceptanceChannelCreation", handleFriendRequestAcceptanceForChannel);
           socket?.off("friendRequestAcceptanceNotification", handleFriendRequestAcceptanceForNotification);
+          socket?.off("updateGroupChannel", handleChannelUpdate);
         } catch (error) {
           console.error("Socket cache entry error:", error);
         }
@@ -137,4 +166,11 @@ export const authApi = createApi({
   }),
 });
 
-export const { useSignInMutation, useFinalizingProviderUsernameMutation, useLogoutMutation, useCreateAccountMutation, useGetUserInfoQuery } = authApi;
+export const {
+  useSignInMutation,
+  useFinalizingProviderUsernameMutation,
+  useLogoutMutation,
+  useCreateAccountMutation,
+  useGetUserInfoQuery,
+  useRemoveFriendMutation,
+} = authApi;

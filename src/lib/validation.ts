@@ -10,6 +10,11 @@ export const loginSchema = z.object({
   rememberMe: z.boolean().optional(),
 });
 
+export const editGroupSchema = z.object({
+  groupLogo: z.instanceof(File).optional(),
+  groupName: z.string().optional(),
+});
+
 export const signupStep1Schema = z
   .object({
     firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -58,6 +63,7 @@ export const createServerSchema = z.object({
 });
 
 export type SendFriendRequestValues = z.infer<typeof sendFriendRequestSchema>;
+export type EditGroupValues = z.infer<typeof editGroupSchema>;
 export type LoginFormValues = z.infer<typeof loginSchema>;
 export type SignupStep1Values = z.infer<typeof signupStep1Schema>;
 export type SignupStep2Values = z.infer<typeof signupStep2Schema>;

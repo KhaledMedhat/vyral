@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/t
 const UserNavigator = () => {
   const currentUserInfo = useAppSelector(selectCurrentUserInfo);
   return (
-    <div className="absolute bottom-3 left-0 right-0 mx-2 flex items-center justify-between bg-main py-1 px-2 rounded-md">
+    <div className="absolute bottom-3 left-0 right-0 mx-2 flex items-center justify-between bg-main-primary py-1 px-2 rounded-md">
       <Popover>
         <PopoverTrigger asChild>
           <div className="flex items-center w-full group gap-2 hover:bg-input rounded-md p-2 cursor-pointer">

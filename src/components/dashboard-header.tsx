@@ -9,21 +9,56 @@ import {
   selectDashboardMessageRequestsHeaderActiveUI,
   selectShowChannelDetails,
 } from "~/redux/slices/app/app-selector";
-import { ActiveUI, FriendsSelectorView, FriendsView, MessageRequestsView } from "~/interfaces/app.interface";
+import { ActiveUI, ConfigPrefix, FriendsSelectorView, FriendsView, MessageRequestsView } from "~/interfaces/app.interface";
 import { setDashboardFriendsHeaderActiveUI, setDashboardMessageRequestsHeaderActiveUI, setShowChannelDetails } from "~/redux/slices/app/app-slice";
 import { selectCurrentUserInfo, selectFriendRequests } from "~/redux/slices/user/user-selector";
 import FriendsSelector from "./friends-selector";
-import { IconPhoneCall, IconPinFilled, IconSearch, IconUsers, IconUsersPlus, IconUserSquareRounded, IconVideoFilled } from "@tabler/icons-react";
+import {
+  IconAt,
+  IconPencil,
+  IconPhoneCall,
+  IconPhotoPlus,
+  IconPin,
+  IconPinFilled,
+  IconSearch,
+  IconUsers,
+  IconUsersPlus,
+  IconUserSquareRounded,
+  IconVideoFilled,
+  IconX,
+} from "@tabler/icons-react";
 import { Input } from "./ui/input";
-import { Popover, PopoverContent } from "./ui/popover";
 import { ChannelType } from "~/interfaces/channels.interface";
 import ProfileAvailabilityIndicator from "./profile-availability-indicator";
-import { getDirectMessageChannelOtherMember } from "~/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { FriendRequestStatus } from "~/interfaces/user.interface";
 import { Badge } from "./ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
+import { useState } from "react";
+import UserDetails from "./user-details";
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { editGroupSchema, EditGroupValues } from "~/lib/validation";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
+import { Spinner } from "./ui/spinner";
+import { useUpdateChannelMutation } from "~/redux/apis/channel.api";
+import useUpload from "~/hooks/use-upload";
+import { SHORT_LOGO_URL } from "~/constants/constants";
+import { ImageCropper } from "./image-cropper";
 
 const DashboardHeader = () => {
+  const [isChannelDialogOpen, setIsChannelDialogOpen] = useState<boolean>(false);
+  const [isUploadingLoading, setIsUploadingLoading] = useState<boolean>(false);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [hasDeletedExistingLogo, setHasDeletedExistingLogo] = useState<boolean>(false);
+
+  // Cropper states
+  const [isCropping, setIsCropping] = useState<boolean>(false);
+  const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
+
+  const [updateChannel, { isLoading: isUpdatingChannel }] = useUpdateChannelMutation();
+  const { startUpload } = useUpload(setIsUploadingLoading, ConfigPrefix.SINGLE_IMAGE_UPLOADER);
   const activeUI = useAppSelector(selectActiveUI);
   const dashboardFriendsHeaderActiveUI = useAppSelector(selectDashboardFriendsHeaderActiveUI);
   const dashboardMessageRequestsHeaderActiveUI = useAppSelector(selectDashboardMessageRequestsHeaderActiveUI);
@@ -32,6 +67,93 @@ const DashboardHeader = () => {
   const currentChannel = useAppSelector(selectCurrentChannel);
   const friendRequests = useAppSelector(selectFriendRequests);
   const dispatch = useAppDispatch();
+
+  const editGroupForm = useForm<EditGroupValues>({
+    resolver: zodResolver(editGroupSchema),
+    defaultValues: {
+      groupName: "",
+      groupLogo: undefined,
+    },
+  });
+
+  const watchedGroupName = editGroupForm.watch("groupName");
+  const watchedGroupLogo = editGroupForm.watch("groupLogo");
+
+  // Check if there are actual changes from original values
+  const hasNameChange = Boolean(watchedGroupName?.trim() && watchedGroupName.trim() !== currentChannel?.groupOrServerName);
+  const hasLogoChange = Boolean(watchedGroupLogo); // New file uploaded
+  const hasFormChanges = hasNameChange || hasLogoChange || hasDeletedExistingLogo;
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const imageUrl = reader.result as string;
+        setOriginalImageUrl(imageUrl);
+        setIsCropping(true);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCropCancel = () => {
+    setIsCropping(false);
+    setOriginalImageUrl(null);
+  };
+
+  const handleCropApply = (croppedFile: File) => {
+    editGroupForm.setValue("groupLogo", croppedFile);
+
+    // Create preview URL for the cropped image
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfileImageUrl(reader.result as string);
+    };
+    reader.readAsDataURL(croppedFile);
+
+    setIsCropping(false);
+    setOriginalImageUrl(null);
+  };
+
+  const resetFormAndCloseDialog = () => {
+    editGroupForm.reset();
+    setProfileImageUrl(null);
+    setHasDeletedExistingLogo(false);
+    setIsCropping(false);
+    setOriginalImageUrl(null);
+    setIsChannelDialogOpen(false);
+  };
+
+  const onEditGroupSubmit = async (data: EditGroupValues) => {
+    const updateDto: { groupOrServerLogo?: string; groupOrServerName?: string } = {};
+
+    // Handle logo changes
+    if (data.groupLogo) {
+      const res = await startUpload([data.groupLogo]);
+      if (res && res[0]) {
+        updateDto.groupOrServerLogo = res[0].ufsUrl;
+      }
+    } else if (hasDeletedExistingLogo) {
+      // User deleted the existing logo, reset to default
+      updateDto.groupOrServerLogo = SHORT_LOGO_URL;
+    }
+
+    // Handle name changes
+    if (data.groupName?.trim() && data.groupName.trim() !== currentChannel?.groupOrServerName) {
+      updateDto.groupOrServerName = data.groupName;
+    }
+
+    // Only update if there are changes
+    if (Object.keys(updateDto).length > 0) {
+      await updateChannel({
+        channelId: currentChannel?._id || "",
+        updateChannelDto: updateDto,
+      });
+    }
+
+    resetFormAndCloseDialog();
+  };
   const friendsButtons = [
     {
       label: "Online",
@@ -128,21 +250,22 @@ const DashboardHeader = () => {
       variant: "ghost" as const,
       size: "default" as const,
       style: "hover:bg-transparent p-0",
-      icon: (
-        <div className="relative">
-          <IconSearch size={20} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={`Search ${
-              currentChannel?.type === ChannelType.Direct
-                ? getDirectMessageChannelOtherMember(currentChannel, currentUserInfo._id)?.displayName || ""
-                : currentChannel?.groupOrServerName || ""
-            }`}
-          />
-        </div>
-      ),
+      icon: (() => {
+        const name =
+          currentChannel?.type === ChannelType.Direct
+            ? currentChannel?.directChannelOtherMember?.displayName || ""
+            : currentChannel?.groupOrServerName || "";
+        const truncatedName = name.length > 10 ? `${name.slice(0, 10)}...` : name;
+        return (
+          <div className="relative">
+            <IconSearch size={20} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder={`Search ${truncatedName}`} />
+          </div>
+        );
+      })(),
     },
   ];
-  const renderHeaderTitle = () => {
+  const mountHeaderTitle = () => {
     switch (activeUI) {
       case ActiveUI.FRIENDS_LIST:
         return (
@@ -191,22 +314,156 @@ const DashboardHeader = () => {
         );
       case ActiveUI.DIRECT_MESSAGES:
       case ActiveUI.GROUP: {
-        const otherMember = currentChannel ? getDirectMessageChannelOtherMember(currentChannel, currentUserInfo._id) : undefined;
         return (
           <div className="flex items-center justify-between gap-4 w-full">
-            <div className="flex items-center gap-2">
-              <ProfileAvailabilityIndicator
-                status={currentChannel?.type === ChannelType.Direct ? otherMember?.status?.type : undefined}
-                imageUrl={currentChannel?.type === ChannelType.Direct ? otherMember?.profilePicture || "" : currentChannel?.groupOrServerLogo || ""}
-                name={currentChannel?.type === ChannelType.Direct ? otherMember?.displayName || "" : currentChannel?.groupOrServerName || ""}
-                size="sm"
-              />
-              <div className="flex items-center gap-1">
-                <p className="font-semibold text-sm">
-                  {currentChannel?.type === ChannelType.Direct ? otherMember?.displayName || "" : currentChannel?.groupOrServerName}
-                </p>
-              </div>
-            </div>
+            <Dialog open={isChannelDialogOpen} onOpenChange={setIsChannelDialogOpen}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="text-foreground group/channel-header-button"
+                    onClick={() => {
+                      // Set existing group logo as default when opening dialog (only if not the default logo)
+                      if (currentChannel?.groupOrServerLogo && currentChannel.groupOrServerLogo !== SHORT_LOGO_URL) {
+                        setProfileImageUrl(currentChannel.groupOrServerLogo);
+                      }
+                      setIsChannelDialogOpen(true);
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <ProfileAvailabilityIndicator
+                        status={currentChannel?.type === ChannelType.Direct ? currentChannel?.directChannelOtherMember?.status?.type : undefined}
+                        imageUrl={
+                          currentChannel?.type === ChannelType.Direct
+                            ? currentChannel?.directChannelOtherMember?.profilePicture || ""
+                            : currentChannel?.groupOrServerLogo || ""
+                        }
+                        name={
+                          currentChannel?.type === ChannelType.Direct
+                            ? currentChannel?.directChannelOtherMember?.displayName || ""
+                            : currentChannel?.groupOrServerName || ""
+                        }
+                        size="sm"
+                      />
+                      <div className="flex items-center gap-1">
+                        <p className="font-semibold text-sm">
+                          {currentChannel?.type === ChannelType.Direct
+                            ? currentChannel?.directChannelOtherMember?.displayName || ""
+                            : currentChannel?.groupOrServerName}
+                        </p>
+                      </div>
+                      {currentChannel?.type === ChannelType.Group && (
+                        <IconPencil size={16} className="hidden group-hover/channel-header-button:block" />
+                      )}
+                    </div>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {currentChannel?.type === ChannelType.Direct ? currentChannel?.directChannelOtherMember?.displayName || "" : "Edit Group"}
+                </TooltipContent>
+              </Tooltip>
+              <DialogContent className={currentChannel?.type === ChannelType.Direct ? "max-w-5xl! pb-0 h-[50vh]! overflow-y-auto" : "max-w-md"}>
+                {currentChannel?.type === ChannelType.Direct && currentChannel?.directChannelOtherMember ? (
+                  <>
+                    <VisuallyHidden.Root>
+                      <DialogHeader>
+                        <DialogTitle></DialogTitle>
+                        <DialogDescription></DialogDescription>
+                      </DialogHeader>
+                    </VisuallyHidden.Root>
+                    <UserDetails user={currentChannel.directChannelOtherMember} size="lg" setDialogOpen={setIsChannelDialogOpen} />
+                  </>
+                ) : isCropping && originalImageUrl ? (
+                  <ImageCropper imageUrl={originalImageUrl} onApply={handleCropApply} onCancel={handleCropCancel} />
+                ) : (
+                  <>
+                    <DialogHeader>
+                      <DialogTitle>Edit Group</DialogTitle>
+                      <VisuallyHidden.Root>
+                        <DialogDescription></DialogDescription>
+                      </VisuallyHidden.Root>
+                    </DialogHeader>
+                    <Form {...editGroupForm}>
+                      <form onSubmit={editGroupForm.handleSubmit(onEditGroupSubmit)} className="space-y-6">
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="relative group">
+                            {profileImageUrl && (
+                              <Button
+                                variant="destructive"
+                                size="icon-sm"
+                                className="absolute top-0 right-0 rounded-full z-10"
+                                onClick={() => {
+                                  // Check if deleting an existing logo (not a newly uploaded one)
+                                  if (profileImageUrl === currentChannel?.groupOrServerLogo) {
+                                    setHasDeletedExistingLogo(true);
+                                  }
+                                  setProfileImageUrl(null);
+                                  editGroupForm.setValue("groupLogo", undefined);
+                                }}
+                              >
+                                <IconX className="size-4" />
+                              </Button>
+                            )}
+                            <div
+                              className={`w-28 h-28 rounded-full border-2 border-dashed border-border flex items-center justify-center overflow-hidden transition-all group-hover:border-accent ${
+                                profileImageUrl ? "border-solid border-accent" : ""
+                              }`}
+                            >
+                              {profileImageUrl ? (
+                                <img src={profileImageUrl || "/placeholder.svg"} alt="Profile" className="w-full h-full object-cover" />
+                              ) : (
+                                <IconPhotoPlus stroke={2} className="h-8 w-8 text-muted-foreground group-hover:text-accent transition-colors" />
+                              )}
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                          </div>
+                          <p className="text-sm text-muted-foreground">Click to upload a group picture (optional)</p>
+                        </div>
+
+                        <FormField
+                          control={editGroupForm.control}
+                          name="groupName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input type="text" placeholder={currentChannel?.groupOrServerName || ""} className="h-11" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="flex items-center gap-4 w-full">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1 h-11 bg-transparent"
+                            onClick={() => setIsChannelDialogOpen(false)}
+                          >
+                            Back
+                          </Button>
+                          <Button type="submit" className="flex-1 h-11" disabled={!hasFormChanges || isUploadingLoading || isUpdatingChannel}>
+                            {isUpdatingChannel || isUploadingLoading ? (
+                              <>
+                                <Spinner />
+                                Saving...
+                              </>
+                            ) : (
+                              <>Save</>
+                            )}
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </>
+                )}
+              </DialogContent>
+            </Dialog>
 
             <div className="flex items-center gap-1">
               {nonServerchannelButtons.map((button) => (
@@ -230,6 +487,7 @@ const DashboardHeader = () => {
       }
     }
   };
+
   return (
     <>
       <header className="flex h-(--header-height) shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
@@ -238,15 +496,10 @@ const DashboardHeader = () => {
         >
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
-          {renderHeaderTitle()}
+          {mountHeaderTitle()}
         </div>
       </header>
       <Separator className="w-[99%]! mx-auto" />
-      {/* <Popover open={showChannelDetails}>
-        <PopoverContent>
-          <h1>asdasd</h1>
-        </PopoverContent>
-      </Popover> */}
     </>
   );
 };

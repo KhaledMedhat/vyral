@@ -4,6 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --main-primary:oklch(0.2452 0.0075 285.83);
   --background: oklch(0.13 0 0);
   --foreground: oklch(0.95 0 0);
   --main: oklch(0.1822 0 0);
@@ -41,6 +42,7 @@
 }
 
 .dark {
+  --main-primary:oklch(0.2452 0.0075 285.83);
   --background: oklch(0.13 0 0);
   --foreground: oklch(0.95 0 0);
   --main: oklch(0.1822 0 0);
@@ -78,6 +80,7 @@
 
 @theme inline {
   --font-lato: "Lato", "Lato Fallback";
+  --color-main-primary: var(--main-primary);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-main: var(--main);
