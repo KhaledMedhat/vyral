@@ -4,7 +4,10 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --main-primary:oklch(0.2452 0.0075 285.83);
+  --main-primary: oklch(0.2452 0.0075 285.83);
+  --main-primary-foreground: oklch(0.2991 0.0089 285.85);
+  --mention: oklch(0.3252 0.0544 284.42);
+  --mention-secondary: oklch(0.7719 0.0966 272.84);
   --background: oklch(0.13 0 0);
   --foreground: oklch(0.95 0 0);
   --main: oklch(0.1822 0 0);
@@ -20,7 +23,7 @@
   --muted-foreground: oklch(0.65 0 0);
   --accent: oklch(0.65 0.2 250);
   --accent-foreground: oklch(0.95 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
+  --destructive: oklch(0.3632 0.1439 28.48);
   --destructive-foreground: oklch(0.95 0 0);
   --border: oklch(0.28 0 0);
   --input: oklch(0.22 0 0);
@@ -42,7 +45,10 @@
 }
 
 .dark {
-  --main-primary:oklch(0.2452 0.0075 285.83);
+  --main-primary: oklch(0.2452 0.0075 285.83);
+  --main-primary-foreground: oklch(0.2991 0.0089 285.85);
+  --mention: oklch(0.3252 0.0544 284.42);
+  --mention-secondary: oklch(0.7719 0.0966 272.84);
   --background: oklch(0.13 0 0);
   --foreground: oklch(0.95 0 0);
   --main: oklch(0.1822 0 0);
@@ -58,7 +64,7 @@
   --muted-foreground: oklch(0.65 0 0);
   --accent: oklch(0.65 0.2 250);
   --accent-foreground: oklch(0.95 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
+  --destructive: oklch(0.3632 0.1439 28.48);
   --destructive-foreground: oklch(0.637 0.237 25.331);
   --border: oklch(0.28 0 0);
   --input: oklch(0.22 0 0);
@@ -76,11 +82,15 @@
   --sidebar-accent-foreground: oklch(0.95 0 0);
   --sidebar-border: oklch(0.28 0 0);
   --sidebar-ring: oklch(0.65 0.2 250);
+  --scrollbar-thumb: var(--primary);
 }
 
 @theme inline {
   --font-lato: "Lato", "Lato Fallback";
   --color-main-primary: var(--main-primary);
+  --color-main-primary-foreground: var(--main-primary-foreground);
+  --color-mention: var(--mention);
+  --color-mention-secondary: var(--mention-secondary);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-main: var(--main);
@@ -118,13 +128,115 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --scrollbar-thumb: var(--primary);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: oklch(from var(--scrollbar-thumb) l c h / 0.4) transparent;
   }
+
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* TipTap Editor Styles */
+.tiptap {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  outline: none;
+}
+
+.tiptap p {
+  margin: 0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.tiptap .ProseMirror {
+  width: 100%;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.loader {
+  width: 20px;
+  aspect-ratio: 1;
+  --_g: no-repeat radial-gradient(circle closest-side,
+      var(--color-muted-foreground) 90%,
+      #0000);
+  background: var(--_g) 0% 50%, var(--_g) 50% 50%, var(--_g) 100% 50%;
+  background-size: calc(100% / 3) 50%;
+  animation: var(--animate-l3);
+}
+
+
+@theme {
+  --animate-spin-once: spin-once 1s ease-in-out;
+  --animate-swing-y-once: swing-y-once 1s ease-in-out;
+  --animate-slash-in: slash-in 0.3s ease-out forwards;
+  --animate-l3: l3 1s infinite linear;
+
+  @keyframes spin-once {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes swing-y-once {
+    0% {
+      transform: rotateY(0deg);
+    }
+
+    25% {
+      transform: rotateY(30deg);
+    }
+
+    75% {
+      transform: rotateY(-30deg);
+    }
+
+    100% {
+      transform: rotateY(0deg);
+    }
+  }
+
+  @keyframes slash-in {
+    0% {
+      transform: translate(0, 100%) rotate(45deg);
+      opacity: 0;
+    }
+
+    100% {
+      transform: translate(0, 0) rotate(45deg);
+      opacity: 1;
+    }
+  }
+
+  @keyframes l3 {
+    20% {
+      background-position: 0% 0%, 50% 50%, 100% 50%;
+    }
+
+    40% {
+      background-position: 0% 100%, 50% 0%, 100% 50%;
+    }
+
+    60% {
+      background-position: 0% 50%, 50% 100%, 100% 0%;
+    }
+
+    80% {
+      background-position: 0% 50%, 50% 50%, 100% 100%;
+    }
   }
 }

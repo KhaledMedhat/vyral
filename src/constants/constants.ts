@@ -2,6 +2,13 @@ export const MAX_FRIENDS = 9;
 
 export const SHORT_LOGO_URL = "https://jicrd1yaac.ufs.sh/f/abrVCtGimWjEOLnac0HsFr5y7iKTElRh2ndIAxGH6Xpf8Zba";
 
+export const REACTION_EMOJIS = [
+  { label: ":thumbsup:", emoji: "👍" },
+  { label: ":heart:", emoji: "❤️" },
+  { label: ":laughing:", emoji: "😂" },
+  { label: ":star_struck:", emoji: "🤩" },
+];
+
 export const MUTE_DURATION_OPTIONS = [
   {
     label: "15 minutes",

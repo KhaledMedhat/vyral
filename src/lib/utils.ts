@@ -186,3 +186,43 @@ export const createCroppedImage = async (imageSrc: string, croppedAreaPixels: Ar
     }, "image/jpeg");
   });
 };
+
+
+/**
+ * Format a date string to a specific format
+ * @param dateString - The date string to format
+ * @param formateType - The format type to use
+ * @returns The formatted date string
+ */
+export function formatDate(dateString: string | undefined, formateType: "lg" | "sm" | "md") {
+  const date = new Date(dateString || "");
+
+  const dateFormatted = date.toLocaleDateString("en-US", {
+    month: "numeric",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  const timeFormatted = date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  const fullTimeFormatted = date.toLocaleDateString([], {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  if (formateType === "lg") {
+    return `${fullTimeFormatted} ${timeFormatted}`;
+  }
+  if (formateType === "md") {
+    return `${dateFormatted} ${timeFormatted}`;
+  }
+  if (formateType === "sm") {
+    return `${timeFormatted}`;
+  }
+}

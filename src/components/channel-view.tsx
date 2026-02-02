@@ -1,23 +1,252 @@
 "use client";
 
 import { useAppSelector } from "~/redux/hooks";
-import { selectCurrentChannel } from "~/redux/slices/app/app-selector";
+import { selectCurrentChannel, selectShowChannelDetails } from "~/redux/slices/app/app-selector";
 import MessageInput from "./message-input";
 import { ChannelType } from "~/interfaces/channels.interface";
+import { ScrollArea } from "./ui/scroll-area";
+import Message from "./message";
+import { MessageInterface, MessageType } from "~/interfaces/message.interface";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useChannelMessages } from "~/hooks/use-channel-messages";
+import { Button } from "./ui/button";
+import { IconChevronDown } from "@tabler/icons-react";
+import { MessageSkeletonList, LoadingMoreSkeleton } from "./message-skeleton";
 
 const ChannelView: React.FC<{ channelId: string }> = ({ channelId }) => {
   const currentChannel = useAppSelector(selectCurrentChannel);
+  const showChannelDetails = useAppSelector(selectShowChannelDetails);
+  const { messages, isLoading, isLoadingMore, hasMore, loadMoreMessages, isSomeoneTyping } = useChannelMessages(channelId);
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const [showScrollButton, setShowScrollButton] = useState<boolean>(false);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const prevScrollHeightRef = useRef<number>(0);
+  const initialScrollDone = useRef<boolean>(false);
+  const prevMessagesLength = useRef<number>(0);
+
+  // Scroll to bottom on initial load
+  useEffect(() => {
+    if (!isLoading && messages.length > 0 && scrollViewportRef.current && !initialScrollDone.current) {
+      // Use setTimeout to ensure DOM is rendered
+      setTimeout(() => {
+        if (scrollViewportRef.current) {
+          scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
+          initialScrollDone.current = true;
+        }
+      }, 100);
+    }
+  }, [isLoading, messages.length]);
+
+  // Reset initial scroll flag when channel changes
+  useEffect(() => {
+    initialScrollDone.current = false;
+    prevMessagesLength.current = 0;
+  }, [channelId]);
+
+  // Auto-scroll to bottom when NEW messages arrive (only if user is at bottom)
+  useEffect(() => {
+    // Only auto-scroll if new messages were added at the end (not loaded older messages)
+    if (
+      scrollViewportRef.current &&
+      !showScrollButton &&
+      !isLoadingMore &&
+      initialScrollDone.current &&
+      messages.length > prevMessagesLength.current
+    ) {
+      scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
+    }
+    prevMessagesLength.current = messages.length;
+  }, [messages.length, showScrollButton, isLoadingMore]);
+
+  // Maintain scroll position when loading older messages
+  useEffect(() => {
+    if (scrollViewportRef.current && prevScrollHeightRef.current > 0 && !isLoadingMore) {
+      const newScrollHeight = scrollViewportRef.current.scrollHeight;
+      const scrollDiff = newScrollHeight - prevScrollHeightRef.current;
+      if (scrollDiff > 0) {
+        scrollViewportRef.current.scrollTop += scrollDiff;
+      }
+      prevScrollHeightRef.current = 0;
+    }
+  }, [messages, isLoadingMore]);
+
+  // Detect scroll position
+  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLDivElement;
+    const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 100;
+    const isAtTop = target.scrollTop < 100;
+
+    setShowScrollButton(!isAtBottom);
+
+    // Only trigger load more after initial scroll is done (prevents loading on first render)
+    if (isAtTop && hasMore && !isLoadingMore && initialScrollDone.current) {
+      prevScrollHeightRef.current = target.scrollHeight;
+      loadMoreMessages();
+    }
+  };
+
+  // Scroll to bottom function
+  const scrollToBottom = useCallback(() => {
+    if (scrollViewportRef.current) {
+      scrollViewportRef.current.scrollTo({
+        top: scrollViewportRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+      setShowScrollButton(false);
+    }
+  }, []);
+
+  const handleMessageHover = useCallback((messageId: string) => {
+    setHoveredMessageId(messageId);
+  }, []);
+
+  const handleMessageLeave = useCallback(() => {
+    setHoveredMessageId(null);
+  }, []);
+  const processedMessages = processMessages(messages || []);
 
   return (
-    <MessageInput
-      placeholder={`Message @${currentChannel?.directChannelOtherMember?.displayName}`}
-      mentionSuggestions={
-        currentChannel?.type === ChannelType.Direct && currentChannel.directChannelOtherMember
-          ? [currentChannel.directChannelOtherMember]
-          : currentChannel?.members
-      }
-    />
+    <section className="flex-1 flex flex-row-reverse h-full min-h-0 overflow-hidden pb-2 pt-2 gap-1">
+      {showChannelDetails && <aside className="h-full bg-main-primary w-1/3 rounded-md p-4 shrink-0">Friends Online</aside>}
+      <div className="relative flex flex-col w-full h-full min-w-0">
+        {/* Messages area - scrollable */}
+        <ScrollArea className="h-[calc(100vh-100px)]" onScroll={handleScroll} viewportRef={scrollViewportRef}>
+          {isLoading ? (
+            <MessageSkeletonList count={8} />
+          ) : (
+            <div className="pb-20">
+              {/* Loading more skeleton at top */}
+              {isLoadingMore && <LoadingMoreSkeleton />}
+
+              {/* Show "Load more" hint if there are more messages */}
+              {hasMore && !isLoadingMore && messages.length > 0 && (
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  Scroll up to load older messages
+                </div>
+              )}
+
+              <div className="p-4 pt-0">
+                {processedMessages.map((item, index) => (
+                  <div key={item.type === "date-separator" ? `date-${index}` : item.message._id}>
+                    {item.type === "date-separator" ? (
+                      <div className="flex items-center my-2 mx-4">
+                        <div className="flex-1 h-px bg-muted-foreground/20"></div>
+                        <div className="text-muted-foreground text-xs font-bold uppercase tracking-wider mx-2">
+                          {new Date(item.date).toLocaleDateString("en-US", {
+                            month: "long",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </div>
+                        <div className="flex-1 h-px bg-muted-foreground/20"></div>
+                      </div>
+                    ) : (
+                      <Message
+                        key={item.message._id}
+                        message={item.message}
+                        showHeader={item.showHeader}
+                        isHovered={hoveredMessageId === item.message._id}
+                        onHover={() => handleMessageHover(item.message._id)}
+                        onLeave={handleMessageLeave}
+                        channel={currentChannel || undefined}
+                        otherUsers={currentChannel?.members}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </ScrollArea>
+        {/* Message input - fixed at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 px-2 pb-2">
+          {isSomeoneTyping.length > 0 && isSomeoneTyping.some(user => user.isTyping) && (
+            <div className="text-sm text-muted-foreground bg-background flex items-start gap-1 p-2">
+              <div className="loader"></div>
+              {isSomeoneTyping.find(user => user.isTyping)?.displayName} is typing
+            </div>
+          )}
+          <MessageInput
+            channelId={channelId}
+            placeholder={`Message @${currentChannel?.directChannelOtherMember?.displayName}`}
+            mentionSuggestions={
+              currentChannel?.type === ChannelType.Direct && currentChannel.directChannelOtherMember
+                ? [currentChannel.directChannelOtherMember]
+                : currentChannel?.members
+            }
+          />
+        </div>
+        {/* Scroll to bottom button */}
+        {showScrollButton && (
+          <Button
+            onClick={scrollToBottom}
+            variant="secondary"
+            className="absolute bottom-20 right-4 p-0 shadow-lg z-10"
+            size="icon"
+          >
+            <IconChevronDown size={20} />
+          </Button>
+        )}
+      </div>
+    </section>
   );
 };
+// Function to check if messages should be grouped
+const shouldGroupMessages = (currentMessage: MessageInterface, previousMessage: MessageInterface | null, timeThreshold: number = 5 * 60 * 1000) => {
+  // If no previous message, should always show header
+  if (!previousMessage) return false;
+
+  // Check if messages are from the same user - use sentBy._id instead of senderId
+  const sameSender = currentMessage.sentBy?._id === previousMessage.sentBy?._id;
+
+  // If current message is a reply, always show header (don't group)
+  if (currentMessage.type === MessageType.REPLY || currentMessage.replyMessageId) {
+    return false;
+  }
+
+  // If different senders, never group
+  if (!sameSender) return false;
+
+  // Check if messages are within the time threshold
+  const currentTime = new Date(currentMessage.createdAt || "").getTime();
+  const previousTime = new Date(previousMessage.createdAt || "").getTime();
+  const timeDifference = Math.abs(currentTime - previousTime);
+
+  // Only group if messages are within time threshold
+  return timeDifference < timeThreshold;
+};
+
+function processMessages(messages: MessageInterface[]) {
+  const processed: Array<{ type: "date-separator"; date: string } | { type: "message"; message: MessageInterface; showHeader: boolean }> = [];
+
+  let lastDate: string | null = null;
+
+  messages.forEach((message, index) => {
+    const messageDate = new Date(message.createdAt || "").toDateString();
+    const previousMessage = index > 0 ? messages[index - 1] : null;
+
+    // Add date separator if day changed
+    if (lastDate && lastDate !== messageDate) {
+      processed.push({
+        type: "date-separator",
+        date: message.createdAt?.toString() || "",
+      });
+    }
+
+    // Determine if we should show header using the grouping function
+    // showHeader is true when we should NOT group messages
+    const showHeader = !shouldGroupMessages(message, previousMessage);
+
+    processed.push({
+      type: "message",
+      message,
+      showHeader,
+    });
+
+    lastDate = messageDate;
+  });
+
+  return processed;
+}
 
 export default ChannelView;

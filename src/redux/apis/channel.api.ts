@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { Channel, CreateChannelBody, CreateChannelResponse, UpdateChannelBody } from "~/interfaces/channels.interface";
 import { authApi } from "./auth.api";
-import { Message } from "~/interfaces/message.interface";
+import { AddMessageBody, MessageInterface } from "~/interfaces/message.interface";
 import { updateCurrentChannel } from "../slices/app/app-slice";
 
 export const channelApi = createApi({
@@ -41,13 +41,38 @@ export const channelApi = createApi({
         body: body.updateChannelDto,
       }),
     }),
-    getChannelMessages: builder.query<Message[], string>({
-      query: (referenceId) => ({
-        url: `/messages/get-messages/${referenceId}`,
+    getChannelMessages: builder.query<
+      { messages: MessageInterface[]; hasMore: boolean; total: number },
+      { channelId: string; limit?: number; before?: string }
+    >({
+      query: ({ channelId, limit = 30, before }) => ({
+        url: `/messages/get-messages/${channelId}`,
         method: "GET",
+        params: { limit, ...(before && { before }) },
+      }),
+    }),
+    sendMessage: builder.mutation<MessageInterface, AddMessageBody>({
+      query: (body) => ({
+        url: `/messages/send-message`,
+        method: "POST",
+        body,
+      }),
+    }),
+    deleteMessage: builder.mutation<void, string>({
+      query: (messageId) => ({
+        url: `/messages/delete-message/${messageId}`,
+        method: "DELETE",
       }),
     }),
   }),
 });
 
-export const { useCreateChannelMutation, useLeaveGroupChannelMutation, useGetChannelMessagesQuery, useUpdateChannelMutation } = channelApi;
+export const {
+  useCreateChannelMutation,
+  useLeaveGroupChannelMutation,
+  useGetChannelMessagesQuery,
+  useLazyGetChannelMessagesQuery,
+  useUpdateChannelMutation,
+  useSendMessageMutation,
+  useDeleteMessageMutation
+} = channelApi;

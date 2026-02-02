@@ -1,18 +1,25 @@
 "use client";
 
-import { useEditor, EditorContent, ReactRenderer } from "@tiptap/react";
+import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Mention from "@tiptap/extension-mention";
 import Placeholder from "@tiptap/extension-placeholder";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
-import tippy, { Instance as TippyInstance } from "tippy.js";
-import { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion";
-import { IconMoodSmile, IconPaperclip, IconSend2 } from "@tabler/icons-react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { SuggestionKeyDownProps } from "@tiptap/suggestion";
+import { IconMoodSmile, IconPaperclip, IconPlus } from "@tabler/icons-react";
 import { cn } from "~/lib/utils";
 import { InputGroup, InputGroupAddon, InputGroupButton } from "./ui/input-group";
 import { FriendInterface } from "~/interfaces/user.interface";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { getInitialsFallback } from "~/lib/utils";
+import ReactionPicker from "./reaction-picker";
+import { Button } from "./ui/button";
+import { Popover, PopoverAnchor, PopoverContent } from "./ui/popover";
+import ProfileAvailabilityIndicator from "./profile-availability-indicator";
+import { useSendMessageMutation } from "~/redux/apis/channel.api";
+import { MessageType } from "~/interfaces/message.interface";
+import { useAppSelector } from "~/redux/hooks";
+import { selectCurrentUserInfo } from "~/redux/slices/user/user-selector";
+import { useSocket } from "~/hooks/use-socket";
+import { socketService } from "~/lib/socket";
 
 interface MentionListProps {
   items: FriendInterface[];
@@ -43,14 +50,17 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(({ items, comma
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }: SuggestionKeyDownProps) => {
       if (event.key === "ArrowUp") {
+        event.preventDefault();
         setSelectedIndex((prev) => (prev + items.length - 1) % items.length);
         return true;
       }
       if (event.key === "ArrowDown") {
+        event.preventDefault();
         setSelectedIndex((prev) => (prev + 1) % items.length);
         return true;
       }
       if (event.key === "Enter") {
+        event.preventDefault();
         selectItem(selectedIndex);
         return true;
       }
@@ -60,30 +70,37 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(({ items, comma
 
   if (items.length === 0) {
     return (
-      <div className="bg-popover text-popover-foreground border rounded-lg p-2 shadow-lg">
+      <div className="p-2">
         <p className="text-sm text-muted-foreground">No users found</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-popover text-popover-foreground border rounded-lg p-1 shadow-lg min-w-[200px]">
+    <div className="flex items-start flex-col p-2 gap-2">
+      <p className="text-xs text-muted-foreground font-semibold uppercase">members</p>
       {items.map((item, index) => (
-        <button
+        <Button
           key={item._id}
+          variant="ghost"
           onClick={() => selectItem(index)}
           className={cn(
-            "flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm text-left transition-colors",
-            index === selectedIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+            "flex items-center gap-2 w-full text-accent-foreground px-2 h-11 rounded-md text-sm text-left transition-colors justify-between hover:bg-main-primary-foreground",
+            index === selectedIndex && "bg-main-primary-foreground"
           )}
         >
-          <Avatar className="size-6">
-            <AvatarImage src={item.profilePicture} alt={item.displayName} />
-            <AvatarFallback className="text-xs">{getInitialsFallback(item.displayName)}</AvatarFallback>
-          </Avatar>
-          <span>{item.displayName}</span>
-          <span className="text-muted-foreground text-xs">@{item.username}</span>
-        </button>
+          <div className="flex items-center gap-2">
+            <ProfileAvailabilityIndicator
+              className="pt-1"
+              size="sm"
+              status={item.status.type}
+              imageUrl={item.profilePicture}
+              name={item.displayName}
+            />
+            <span className="flex items-center gap-2">{item.displayName}</span>
+          </div>
+          <span className="text-xs text-muted-foreground font-semibold">{item.username}</span>
+        </Button>
       ))}
     </div>
   );
@@ -97,13 +114,45 @@ interface MessageInputProps {
   mentionSuggestions?: FriendInterface[];
   disabled?: boolean;
   className?: string;
+  value?: string;
+  channelId: string;
 }
 
-const MessageInput: React.FC<MessageInputProps> = ({ onSend, placeholder, mentionSuggestions = [], disabled = false, className }) => {
-  const [isFocused, setIsFocused] = useState(false);
-
+const MessageInput: React.FC<MessageInputProps> = ({ onSend, placeholder, mentionSuggestions = [], disabled = false, className, channelId, value }) => {
+  const [isFocused, setIsFocused] = useState<boolean>(false);
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionItems, setMentionItems] = useState<FriendInterface[]>([]);
+  const [mentionCommand, setMentionCommand] = useState<((item: { id: string; label: string }) => void) | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mentionListRef = useRef<MentionListRef>(null);
+  const [sendMessage] = useSendMessageMutation();
+  const currentUserInfo = useAppSelector(selectCurrentUserInfo);
   const editor = useEditor({
+    onUpdate: async ({ editor }) => {
+      const socket = socketService.getSocket();
+      if (editor?.getText().length > 0) {
+        socket?.emit("typing", {
+          user: currentUserInfo,
+          isTyping: true,
+          channelId
+        })
+        setTimeout(() => {
+          socket?.emit("typing", {
+            user: currentUserInfo,
+            isTyping: false,
+            channelId
+          })
+        }, 2000)
+      } else {
+        socket?.emit("typing", {
+          user: currentUserInfo,
+          isTyping: false,
+          channelId
+        });
+      }
+    },
     immediatelyRender: false,
+    content: value ?? "",
     extensions: [
       StarterKit.configure({
         heading: false,
@@ -117,7 +166,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, placeholder, mentio
       }),
       Mention.configure({
         HTMLAttributes: {
-          class: "mention bg-accent text-accent-foreground px-1 rounded font-medium",
+          class: "mention bg-mention text-mention-secondary font-semibold px-0.5 rounded",
         },
         suggestion: {
           items: ({ query }: { query: string }) => {
@@ -128,47 +177,27 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, placeholder, mentio
               .slice(0, 5);
           },
           render: () => {
-            let component: ReactRenderer<MentionListRef, MentionListProps> | null = null;
-            let popup: TippyInstance[] | null = null;
-
             return {
-              onStart: (props: SuggestionProps<FriendInterface>) => {
-                component = new ReactRenderer(MentionList, {
-                  props,
-                  editor: props.editor,
-                });
-
-                if (!props.clientRect) return;
-
-                popup = tippy("body", {
-                  getReferenceClientRect: props.clientRect as () => DOMRect,
-                  appendTo: () => document.body,
-                  content: component.element,
-                  showOnCreate: true,
-                  interactive: true,
-                  trigger: "manual",
-                  placement: "top-start",
-                });
+              onStart: (props) => {
+                setMentionItems(props.items as FriendInterface[]);
+                setMentionCommand(() => props.command);
+                setMentionOpen(true);
               },
-              onUpdate: (props: SuggestionProps<FriendInterface>) => {
-                component?.updateProps(props);
-
-                if (!props.clientRect) return;
-
-                popup?.[0]?.setProps({
-                  getReferenceClientRect: props.clientRect as () => DOMRect,
-                });
+              onUpdate: (props) => {
+                setMentionItems(props.items as FriendInterface[]);
+                setMentionCommand(() => props.command);
               },
               onKeyDown: (props: SuggestionKeyDownProps) => {
                 if (props.event.key === "Escape") {
-                  popup?.[0]?.hide();
+                  setMentionOpen(false);
                   return true;
                 }
-                return component?.ref?.onKeyDown(props) ?? false;
+                return mentionListRef.current?.onKeyDown(props) ?? false;
               },
               onExit: () => {
-                popup?.[0]?.destroy();
-                component?.destroy();
+                setMentionOpen(false);
+                setMentionItems([]);
+                setMentionCommand(null);
               },
             };
           },
@@ -178,12 +207,12 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, placeholder, mentio
     editorProps: {
       attributes: {
         class: cn(
-          "prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[40px] max-h-[200px] overflow-y-auto px-3 py-2",
+          "prose prose-sm dark:prose-invert max-w-none focus:outline-none px-3 leading-relaxed",
           "[&_.is-editor-empty:first-child::before]:text-muted-foreground [&_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.is-editor-empty:first-child::before]:float-left [&_.is-editor-empty:first-child::before]:pointer-events-none [&_.is-editor-empty:first-child::before]:h-0"
         ),
       },
       handleKeyDown: (view, event) => {
-        if (event.key === "Enter" && !event.shiftKey) {
+        if (event.key === "Enter" && !event.shiftKey && !mentionOpen) {
           event.preventDefault();
           handleSend();
           return true;
@@ -195,7 +224,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, placeholder, mentio
     onBlur: () => setIsFocused(false),
   });
 
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     if (!editor || editor.isEmpty) return;
 
     const content = editor.getHTML();
@@ -215,40 +244,68 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, placeholder, mentio
       }
     };
     extractMentions(json as Record<string, unknown>);
-
+    console.log(json); // we send this json to the server
+    await sendMessage({
+      referenceId: channelId,
+      message: json,
+      sentBy: currentUserInfo._id,
+      type: MessageType.TEXT,
+    });
     onSend?.(content, mentions);
     editor.commands.clearContent();
   }, [editor, onSend]);
 
-  const isEmpty = editor?.isEmpty ?? true;
-
   return (
-    <InputGroup
-      className={cn(
-        "h-14 transition-all",
-        isFocused && "border-ring ring-ring/50 ring-[3px]",
-        disabled && "opacity-50 pointer-events-none",
-        className
-      )}
-    >
-      <div className="flex-1 min-w-0">
-        <EditorContent editor={editor} />
-      </div>
-      <InputGroupAddon align="inline-end" className="gap-1">
-        <InputGroupButton variant="ghost" size="icon-xs" className="rounded-full" type="button">
-          <IconPaperclip className="size-4" />
-          <span className="sr-only">Attach file</span>
-        </InputGroupButton>
-        <InputGroupButton variant="ghost" size="icon-xs" className="rounded-full" type="button">
-          <IconMoodSmile className="size-4" />
-          <span className="sr-only">Add emoji</span>
-        </InputGroupButton>
-        <InputGroupButton variant="default" size="icon-xs" className="rounded-full" onClick={handleSend} disabled={isEmpty} type="button">
-          <IconSend2 className="size-4" />
-          <span className="sr-only">Send</span>
-        </InputGroupButton>
-      </InputGroupAddon>
-    </InputGroup>
+    <Popover open={mentionOpen}>
+      <PopoverAnchor asChild>
+        <InputGroup
+          ref={containerRef}
+          className={cn(
+            "h-auto min-h-[62px] transition-all bg-main-primary",
+            isFocused && "border ring-ring/50 ring-[1px]",
+            disabled && "opacity-50 pointer-events-none",
+            className
+          )}
+        >
+          <div className="flex-1 min-w-0 w-0 max-h-[180px] overflow-y-auto overflow-x-hidden py-2">
+            <EditorContent editor={editor} />
+          </div>
+          {!value && <InputGroupAddon align="inline-start" className="gap-1 self-center">
+            <InputGroupButton variant="ghost" size="sm" type="button">
+              <IconPlus size={22} />
+            </InputGroupButton>
+          </InputGroupAddon>}
+          <InputGroupAddon align="inline-end" className="gap-1 self-center">
+            {!value && <InputGroupButton variant="ghost" size="icon-xs" className="rounded-full" type="button">
+              <IconPaperclip className="size-4" />
+              <span className="sr-only">Attach file</span>
+            </InputGroupButton>}
+            <ReactionPicker>
+              <InputGroupButton variant="ghost" size="sm" type="button">
+                <IconMoodSmile size={22} />
+              </InputGroupButton>
+            </ReactionPicker>
+          </InputGroupAddon>
+        </InputGroup>
+      </PopoverAnchor>
+      <PopoverContent
+        side="top"
+        align="start"
+        sideOffset={8}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+        className="p-1"
+        style={{ width: containerRef.current?.offsetWidth ?? "auto" }}
+      >
+        {mentionCommand && (
+          <MentionList
+            ref={mentionListRef}
+            items={mentionItems}
+            command={mentionCommand}
+          />
+        )}
+      </PopoverContent>
+    </Popover>
   );
 };
 

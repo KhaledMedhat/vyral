@@ -431,7 +431,13 @@ const DashboardHeader = () => {
                           render={({ field }) => (
                             <FormItem>
                               <FormControl>
-                                <Input type="text" placeholder={currentChannel?.groupOrServerName || ""} className="h-11" {...field} />
+                                <Input
+                                  autoComplete="off"
+                                  type="text"
+                                  placeholder={currentChannel?.groupOrServerName || ""}
+                                  className="h-11"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>

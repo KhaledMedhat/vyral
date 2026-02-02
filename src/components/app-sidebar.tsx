@@ -292,7 +292,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <IconPlus stroke={2} className="size-5!" />
               </SidebarMenuButton>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] gap-10">
+            <DialogContent className="sm:max-w-[425px] max-w-lg! gap-10">
               <DialogHeader className="relative overflow-hidden">
                 <div
                   className="transition-all duration-500 ease-in-out flex items-center flex-col gap-4"
@@ -456,7 +456,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             <FormItem>
                               <FormLabel className="uppercase font-semibold text-xs">Server Name</FormLabel>
                               <FormControl>
-                                <Input placeholder={`${currentUserInfo.displayName}'s Server`} type="text" {...field} />
+                                <Input autoComplete="off" placeholder={`${currentUserInfo.displayName}'s Server`} type="text" {...field} />
                               </FormControl>
                               <FormMessage />
                               <FormDescription className="text-xs">

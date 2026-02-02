@@ -1,4 +1,4 @@
-import { Message } from "./message.interface";
+import { MessageInterface } from "./message.interface";
 import { FriendInterface, StatusType } from "./user.interface";
 
 export enum ChannelType {
@@ -44,7 +44,7 @@ export interface Channel {
   createdBy: string;
   groupOrServerName?: string;
   groupOrServerLogo?: string;
-  pinnedMessages?: Message[];
+  pinnedMessages?: MessageInterface[];
   createdAt: string;
 }
 

@@ -11,14 +11,17 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "~/components/ui/navigation-menu";
-import { useAppSelector } from "~/redux/hooks";
+import { useAppDispatch, useAppSelector } from "~/redux/hooks";
 import { selectCurrentUserInfo, selectUserLoggedInStatus } from "~/redux/slices/user/user-selector";
 import { syncAuthState } from "~/lib/utils";
 import { useEffect } from "react";
 import Image from "next/image";
+import { setActiveUI, setDashboardFriendsHeaderActiveUI } from "~/redux/slices/app/app-slice";
+import { ActiveUI, FriendsView } from "~/interfaces/app.interface";
 
 export function Navbar() {
   const isLoggedIn = useAppSelector(selectUserLoggedInStatus);
+  const dispatch = useAppDispatch();
   const currentUserInfo = useAppSelector(selectCurrentUserInfo);
   useEffect(() => {
     syncAuthState();
@@ -137,7 +140,10 @@ export function Navbar() {
           {isLoggedIn ? (
             <>
               <Link href={`/channels/${currentUserInfo.channelSlug}`}>
-                <Button className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90">Start Chatting</Button>
+                <Button onClick={() => {
+                  dispatch(setActiveUI(ActiveUI.FRIENDS_LIST))
+                  dispatch(setDashboardFriendsHeaderActiveUI(FriendsView.ONLINE))
+                }} className="rounded-full bg-accent text-accent-foreground hover:bg-accent/90">Start Chatting</Button>
               </Link>
             </>
           ) : (
