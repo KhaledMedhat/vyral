@@ -27,6 +27,7 @@ export interface AddMessageBody {
 }
 
 export interface UpdateMessageBody {
+  isPinned?: boolean;
   message: JSONContent;
 }
 

@@ -2,7 +2,7 @@
 
 import { MessageType, type MessageInterface } from "~/interfaces/message.interface";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { useState, memo, useEffect } from "react";
+import { useState, memo, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { FriendInterface } from "~/interfaces/user.interface";
@@ -51,7 +51,7 @@ interface MessageComponentProps {
     message: MessageInterface;
     showHeader: boolean;
     isHovered: boolean;
-    onHover: () => void;
+    onHover: (messageId: string) => void;
     onLeave: () => void;
     channel: Channel | undefined;
     setIsPinnedMessagesOpen?: (isPinnedMessagesOpen: boolean) => void;
@@ -98,11 +98,15 @@ const Message = memo<MessageComponentProps>(
         //             setIsEditing(false);
         //         });
         // };
-        const handleMouseLeave = () => {
+        const handleMouseEnter = useCallback(() => {
+            onHover(message._id);
+        }, [message._id, onHover]);
+
+        const handleMouseLeave = useCallback(() => {
             if (!isDropdownOpen) {
                 onLeave();
             }
-        };
+        }, [isDropdownOpen, onLeave]);
         return (
             <Dialog open={isForwardDialogOpen || isPinDialogOpen} onOpenChange={setIsForwardDialogOpen || setIsPinDialogOpen}>
                 <AlertDialog open={isPinAlertDialogOpen || isDeleteAlertDialogOpen} onOpenChange={setIsPinAlertDialogOpen || setIsDeleteAlertDialogOpen}>
@@ -112,7 +116,7 @@ const Message = memo<MessageComponentProps>(
                                 id={message._id}
                                 className={`group relative px-4 -mx-4 cursor-default transition-colors duration-75 ${message._id && replyingToMessage?._id === message._id && "bg-primary/40"
                                     } ${isHovered && "bg-main"} ${showHeader && "mt-4"} ${message.type === MessageType.REPLY && "pt-1"}`}
-                                onMouseEnter={onHover}
+                                onMouseEnter={handleMouseEnter}
                                 onMouseLeave={handleMouseLeave}
                             >
                                 {message.type === MessageType.REPLY && message.replyMessageId && (
@@ -185,7 +189,7 @@ const Message = memo<MessageComponentProps>(
                                         <div className="flex-1 min-w-0 flex w-full">
                                             {message.type === MessageType.FORWARD && <span className="bg-muted-foreground w-0.5 rounded-xs mr-3 my-2" />}
 
-                                            <div className={`${showHeader && "pt-1 w-full"}`}>
+                                            <div className={`${showHeader && "pt-1"} w-full`}>
                                                 {/* Header */}
                                                 {showHeader && (
                                                     <div className="flex items-center gap-2">
@@ -204,8 +208,8 @@ const Message = memo<MessageComponentProps>(
                                                 {/* Message text and attachments */}
                                                 <div className="text-base leading-snug wrap-break-word w-full">
                                                     {isEditing ? (
-                                                        <div className="flex flex-col gap-2">
-                                                            <MessageInput channelId={channel?._id ?? ""} value={message.message.content?.[0].content?.map((msg) => msg.text).join("") ?? ""} />
+                                                        <div className="flex flex-col gap-2 w-full">
+                                                            <MessageInput channelId={channel?._id ?? ""} value={message.message.content?.[0].content?.map((msg) => msg.text).join("") ?? ""} isEditing={true} messageId={message._id} setIsEditing={setIsEditing} />
                                                             {/* <MentionInput
                                                             updateMessageHandler={updateMessageHandler}
                                                             existingMessage={message.message}
@@ -281,7 +285,7 @@ const Message = memo<MessageComponentProps>(
                                                                         <TooltipTrigger asChild>
                                                                             <Button
                                                                                 variant="ghost"
-                                                                                className={`bg-background shadow-xl p-1.5 flex items-center gap-1 hover:bg-secondary-foreground  ${reaction.sentBy.some((user) => user._id === currentUser?._id) && "ring-2 ring-primary bg-primary/10"
+                                                                                className={`bg-background shadow-xl p-1.5 flex items-center gap-1 hover:bg-secondary-foreground  ${reaction.sentBy?.some((user) => user?._id === currentUser?._id) && "ring-2 ring-primary bg-primary/10"
                                                                                     }`}
                                                                             // onClick={() =>
                                                                             //     makeReaction({
@@ -302,7 +306,7 @@ const Message = memo<MessageComponentProps>(
                                                                             sideOffset={10} className="bg-muted flex items-center gap-2 py-4">
                                                                             <span className="text-6xl">{reaction.emoji}</span>
                                                                             <span className="text-md font-semibold">
-                                                                                reacted by {reaction.sentBy.map((user) => user.displayName).join(", ")}
+                                                                                reacted by {reaction.sentBy?.filter(Boolean).map((user) => user?.displayName).join(", ")}
                                                                             </span>
                                                                         </TooltipContent>
                                                                     </Tooltip>
@@ -441,6 +445,7 @@ const Message = memo<MessageComponentProps>(
                             <ContextMenuSeparator />
                             <ContextMenuItem
                                 onClick={() => {
+                                    navigator.clipboard.writeText(message.message.content?.[0].content?.map((msg) => msg.text).join("") ?? "");
                                     // navigator.clipboard.writeText(message.message.content);
                                     // handleRemoveClipboard();
                                     // dispatch(setCopiedMessage(message.message)); 

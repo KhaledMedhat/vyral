@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useLazyGetChannelMessagesQuery } from "~/redux/apis/channel.api";
 import { MessageInterface } from "~/interfaces/message.interface";
 import { useSocket } from "./use-socket";
+import { JSONContent } from "@tiptap/react";
+import { User } from "~/interfaces/user.interface";
 
 const MESSAGES_PER_PAGE = 42;
 
@@ -20,13 +22,21 @@ export function useChannelMessages(channelId: string) {
 
     // Track if initial load is done
     const initialLoadDone = useRef(false);
+    // Use ref to access current messages without adding to dependencies
+    const messagesRef = useRef<MessageInterface[]>([]);
 
     // Reset state when channel changes
     useEffect(() => {
         setIsSomeoneTyping([]);
         setMessages([]);
+        messagesRef.current = [];
         setHasMore(true);
     }, [channelId]);
+
+    // Keep messagesRef in sync with messages state
+    useEffect(() => {
+        messagesRef.current = messages;
+    }, [messages]);
 
     // Load initial messages
     useEffect(() => {
@@ -57,11 +67,11 @@ export function useChannelMessages(channelId: string) {
         loadInitialMessages();
     }, [channelId, fetchMessages]);
 
-    // Load more (older) messages
+    // Load more (older) messages - uses messagesRef to avoid recreating on every messages change
     const loadMoreMessages = useCallback(async () => {
-        if (isLoadingMore || !hasMore || messages.length === 0) return;
+        if (isLoadingMore || !hasMore || messagesRef.current.length === 0) return;
 
-        const oldestMessage = messages[0];
+        const oldestMessage = messagesRef.current[0];
         if (!oldestMessage?._id) return;
 
         setIsLoadingMore(true);
@@ -73,15 +83,19 @@ export function useChannelMessages(channelId: string) {
                 before: oldestMessage._id,
             }).unwrap();
 
-            // Prepend older messages
-            setMessages((prev) => [...result.messages, ...prev]);
+            // Prepend older messages, filtering out any duplicates
+            setMessages((prev) => {
+                const existingIds = new Set(prev.map((msg) => msg._id));
+                const newMessages = result.messages.filter((msg) => !existingIds.has(msg._id));
+                return [...newMessages, ...prev];
+            });
             setHasMore(result.hasMore);
         } catch (error) {
             console.error("Failed to load more messages:", error);
         } finally {
             setIsLoadingMore(false);
         }
-    }, [channelId, fetchMessages, hasMore, isLoadingMore, messages]);
+    }, [channelId, fetchMessages, hasMore, isLoadingMore]);
 
     // Socket event handlers
     useEffect(() => {
@@ -114,7 +128,6 @@ export function useChannelMessages(channelId: string) {
         // }
         // Handle new message - backend sends { message: MessageInterface }
         const handleNewMessage = (data: { message: MessageInterface }) => {
-            console.log("newMessage", data);
             const newMessage = data.message;
             if (newMessage.referenceId === channelId) {
                 setMessages((prev) => {
@@ -125,14 +138,94 @@ export function useChannelMessages(channelId: string) {
             }
         };
 
-        // Handle message update - backend sends { message: MessageInterface }
-        const handleUpdateMessage = (data: { message: MessageInterface }) => {
-            const updatedMessage = data.message;
-            if (updatedMessage.referenceId === channelId) {
-                setMessages((prev) =>
-                    prev.map((msg) => (msg._id === updatedMessage._id ? updatedMessage : msg))
-                );
-            }
+        // Handle message update - backend sends partial update data
+        const handleUpdateMessage = (data: {
+            messageId: string;
+            referenceId: string;
+            manuallyUpdatedAt?: string;
+            newText?: JSONContent;
+            isPinned?: boolean;
+            reaction?: { emoji: string; sentBy: User };
+        }) => {
+            console.log("data", data);
+            if (data.referenceId !== channelId) return;
+
+            setMessages((prev) =>
+                prev.map((msg) => {
+                    if (msg._id !== data.messageId) return msg;
+
+                    let updatedMsg = { ...msg };
+
+                    // Case 1: Text update
+                    if (data.manuallyUpdatedAt && data.newText) {
+                        updatedMsg = {
+                            ...updatedMsg,
+                            message: data.newText,
+                            updatedAt: new Date(data.manuallyUpdatedAt),
+                        };
+                    }
+
+                    // Case 2: Pin update
+                    if (data.isPinned !== undefined) {
+                        updatedMsg = {
+                            ...updatedMsg,
+                            isPinned: data.isPinned,
+                        };
+                    }
+
+                    // Case 3: Reaction update
+                    if (data.reaction) {
+                        const { emoji, sentBy } = data.reaction;
+                        const existingReactions = [...(updatedMsg.reactions || [])];
+                        const reactionIndex = existingReactions.findIndex((r) => r.emoji === emoji);
+
+                        if (reactionIndex === -1) {
+                            // Case 3a: New emoji - add new reaction with count 1
+                            existingReactions.push({
+                                emoji,
+                                counter: 1,
+                                sentBy: [sentBy],
+                            });
+                        } else {
+                            const existingReaction = existingReactions[reactionIndex];
+                            const userAlreadyReacted = existingReaction.sentBy.some(
+                                (user) => user._id === sentBy._id
+                            );
+
+                            if (!userAlreadyReacted) {
+                                // Case 3b: Emoji exists but user hasn't reacted - add user and increment
+                                existingReactions[reactionIndex] = {
+                                    ...existingReaction,
+                                    counter: existingReaction.counter + 1,
+                                    sentBy: [...existingReaction.sentBy, sentBy],
+                                };
+                            } else {
+                                // User already reacted with this emoji
+                                if (existingReaction.counter === 1) {
+                                    // Case 3d: Only 1 reaction and same user - remove entire reaction
+                                    existingReactions.splice(reactionIndex, 1);
+                                } else {
+                                    // Case 3c: Multiple reactions - decrement and remove user
+                                    existingReactions[reactionIndex] = {
+                                        ...existingReaction,
+                                        counter: existingReaction.counter - 1,
+                                        sentBy: existingReaction.sentBy.filter(
+                                            (user) => user._id !== sentBy._id
+                                        ),
+                                    };
+                                }
+                            }
+                        }
+
+                        updatedMsg = {
+                            ...updatedMsg,
+                            reactions: existingReactions,
+                        };
+                    }
+
+                    return updatedMsg;
+                })
+            );
         };
 
         // Handle message delete
@@ -153,7 +246,7 @@ export function useChannelMessages(channelId: string) {
         };
 
         socket.on("getNewMessage", handleNewMessage);
-        socket.on("updateMessage", handleUpdateMessage);
+        socket.on("getUpdatedMessage", handleUpdateMessage);
         socket.on("getDeletedMessage", handleDeleteMessage);
         socket.on("messageReaction", handleReaction);
         socket?.on("typing", handleIsTyping);
@@ -161,7 +254,7 @@ export function useChannelMessages(channelId: string) {
 
         return () => {
             socket.off("getNewMessage", handleNewMessage);
-            socket.off("updateMessage", handleUpdateMessage);
+            socket.off("getUpdatedMessage", handleUpdateMessage);
             socket.off("getDeletedMessage", handleDeleteMessage);
             socket.off("messageReaction", handleReaction);
             socket.off("typing", handleIsTyping);

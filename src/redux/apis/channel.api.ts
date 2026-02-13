@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { Channel, CreateChannelBody, CreateChannelResponse, UpdateChannelBody } from "~/interfaces/channels.interface";
 import { authApi } from "./auth.api";
-import { AddMessageBody, MessageInterface } from "~/interfaces/message.interface";
+import { AddMessageBody, MessageInterface, UpdateMessageBody } from "~/interfaces/message.interface";
 import { updateCurrentChannel } from "../slices/app/app-slice";
 
 export const channelApi = createApi({
@@ -58,10 +58,30 @@ export const channelApi = createApi({
         body,
       }),
     }),
+    updateMessage: builder.mutation<MessageInterface, { messageId: string; body: { updateMessageDto: UpdateMessageBody; referenceId: string } }>({
+      query: (args) => ({
+        url: `/messages/update-message/${args.messageId}`,
+        method: "PATCH",
+        body: args.body,
+      }),
+    }),
     deleteMessage: builder.mutation<void, string>({
       query: (messageId) => ({
         url: `/messages/delete-message/${messageId}`,
         method: "DELETE",
+      }),
+    }),
+    pinMessage: builder.mutation<void, { channelId: string; messageId: string; pinnedBy: { id: string; label: string } }>({
+      query: (body) => ({
+        url: `/channels/pin-message/${body.channelId}`,
+        method: "PATCH",
+        body,
+      }),
+    }),
+    unpinMessage: builder.mutation<void, { channelId: string; messageId: string }>({
+      query: (body) => ({
+        url: `/messages/unpin-message/${body.channelId}/${body.messageId}`,
+        method: "PATCH",
       }),
     }),
   }),
@@ -74,5 +94,8 @@ export const {
   useLazyGetChannelMessagesQuery,
   useUpdateChannelMutation,
   useSendMessageMutation,
-  useDeleteMessageMutation
+  useDeleteMessageMutation,
+  useUpdateMessageMutation,
+  usePinMessageMutation,
+  useUnpinMessageMutation,
 } = channelApi;

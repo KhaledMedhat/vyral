@@ -11,6 +11,25 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+
+/**
+ * Get the label of a channel type
+ * @param channelType - The channel type to get the label of
+ * @returns The label of the channel type
+ */
+export function getChannelTypeLabel(channelType: ChannelType | undefined) {
+  switch (channelType) {
+    case ChannelType.Direct:
+      return "Direct Message";
+    case ChannelType.Group:
+      return "Group";
+    case ChannelType.Server:
+      return "Server";
+    default:
+      return "Unknown";
+  }
+}
+
 /**
  * Compare the temp user token with the query param for the completion of the signup process if its with google signup
  * @param queryParam - The query param to compare

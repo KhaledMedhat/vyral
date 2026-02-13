@@ -7,7 +7,7 @@ import { ChannelType } from "~/interfaces/channels.interface";
 import { ScrollArea } from "./ui/scroll-area";
 import Message from "./message";
 import { MessageInterface, MessageType } from "~/interfaces/message.interface";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChannelMessages } from "~/hooks/use-channel-messages";
 import { Button } from "./ui/button";
 import { IconChevronDown } from "@tabler/icons-react";
@@ -68,22 +68,35 @@ const ChannelView: React.FC<{ channelId: string }> = ({ channelId }) => {
       }
       prevScrollHeightRef.current = 0;
     }
-  }, [messages, isLoadingMore]);
+  }, [messages.length, isLoadingMore]);
 
-  // Detect scroll position
-  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    const target = event.target as HTMLDivElement;
-    const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 100;
-    const isAtTop = target.scrollTop < 100;
+  // Detect scroll position - throttled, memoized and only updates state when value changes
+  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    // Throttle scroll handling using requestAnimationFrame
+    if (scrollThrottleRef.current) return;
+    scrollThrottleRef.current = true;
 
-    setShowScrollButton(!isAtBottom);
+    requestAnimationFrame(() => {
+      const target = event.target as HTMLDivElement;
+      const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 100;
+      const isAtTop = target.scrollTop < 100;
 
-    // Only trigger load more after initial scroll is done (prevents loading on first render)
-    if (isAtTop && hasMore && !isLoadingMore && initialScrollDone.current) {
-      prevScrollHeightRef.current = target.scrollHeight;
-      loadMoreMessages();
-    }
-  };
+      // Only update state if the value actually changed
+      const shouldShowButton = !isAtBottom;
+      if (showScrollButtonRef.current !== shouldShowButton) {
+        showScrollButtonRef.current = shouldShowButton;
+        setShowScrollButton(shouldShowButton);
+      }
+
+      // Only trigger load more after initial scroll is done (prevents loading on first render)
+      if (isAtTop && hasMore && !isLoadingMore && initialScrollDone.current) {
+        prevScrollHeightRef.current = target.scrollHeight;
+        loadMoreMessages();
+      }
+
+      scrollThrottleRef.current = false;
+    });
+  }, [hasMore, isLoadingMore, loadMoreMessages]);
 
   // Scroll to bottom function
   const scrollToBottom = useCallback(() => {
@@ -103,7 +116,13 @@ const ChannelView: React.FC<{ channelId: string }> = ({ channelId }) => {
   const handleMessageLeave = useCallback(() => {
     setHoveredMessageId(null);
   }, []);
-  const processedMessages = processMessages(messages || []);
+
+  // Use ref to track scroll button state without causing re-renders during scroll
+  const showScrollButtonRef = useRef(false);
+  const scrollThrottleRef = useRef(false);
+
+  // Memoize processed messages to avoid recalculating on every render
+  const processedMessages = useMemo(() => processMessages(messages || []), [messages]);
 
   return (
     <section className="flex-1 flex flex-row-reverse h-full min-h-0 overflow-hidden pb-2 pt-2 gap-1">
@@ -114,7 +133,7 @@ const ChannelView: React.FC<{ channelId: string }> = ({ channelId }) => {
           {isLoading ? (
             <MessageSkeletonList count={8} />
           ) : (
-            <div className="pb-20">
+            <div className="pb-14">
               {/* Loading more skeleton at top */}
               {isLoadingMore && <LoadingMoreSkeleton />}
 
@@ -146,7 +165,7 @@ const ChannelView: React.FC<{ channelId: string }> = ({ channelId }) => {
                         message={item.message}
                         showHeader={item.showHeader}
                         isHovered={hoveredMessageId === item.message._id}
-                        onHover={() => handleMessageHover(item.message._id)}
+                        onHover={handleMessageHover}
                         onLeave={handleMessageLeave}
                         channel={currentChannel || undefined}
                         otherUsers={currentChannel?.members}
@@ -159,7 +178,7 @@ const ChannelView: React.FC<{ channelId: string }> = ({ channelId }) => {
           )}
         </ScrollArea>
         {/* Message input - fixed at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 px-2 pb-2">
+        <div className="absolute bottom-0 left-0 right-0 px-2">
           {isSomeoneTyping.length > 0 && isSomeoneTyping.some(user => user.isTyping) && (
             <div className="text-sm text-muted-foreground bg-background flex items-start gap-1 p-2">
               <div className="loader"></div>
@@ -168,6 +187,7 @@ const ChannelView: React.FC<{ channelId: string }> = ({ channelId }) => {
           )}
           <MessageInput
             channelId={channelId}
+            isEditing={false}
             placeholder={`Message @${currentChannel?.directChannelOtherMember?.displayName}`}
             mentionSuggestions={
               currentChannel?.type === ChannelType.Direct && currentChannel.directChannelOtherMember

@@ -46,13 +46,19 @@ import { useUpdateChannelMutation } from "~/redux/apis/channel.api";
 import useUpload from "~/hooks/use-upload";
 import { SHORT_LOGO_URL } from "~/constants/constants";
 import { ImageCropper } from "./image-cropper";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./ui/empty";
+import { getChannelTypeLabel } from "~/lib/utils";
+import { ScrollArea } from "./ui/scroll-area";
+import { Card, CardDescription, CardHeader, CardTitle } from "./ui/card";
 
 const DashboardHeader = () => {
   const [isChannelDialogOpen, setIsChannelDialogOpen] = useState<boolean>(false);
   const [isUploadingLoading, setIsUploadingLoading] = useState<boolean>(false);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [hasDeletedExistingLogo, setHasDeletedExistingLogo] = useState<boolean>(false);
-
+  const [isPinnedMessagesPopoverOpen, setIsPinnedMessagesPopoverOpen] = useState<boolean>(false);
+  const [isAddFriendsPopoverOpen, setIsAddFriendsPopoverOpen] = useState<boolean>(false);
   // Cropper states
   const [isCropping, setIsCropping] = useState<boolean>(false);
   const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
@@ -204,31 +210,64 @@ const DashboardHeader = () => {
   const nonServerchannelButtons = [
     {
       label: "Start Voice Call",
-      onClick: () => {},
+      onClick: () => { },
       variant: "ghost" as const,
       size: "icon" as const,
       icon: <IconPhoneCall size={20} />,
     },
     {
       label: "Start Video Call",
-      onClick: () => {},
+      onClick: () => { },
       variant: "ghost" as const,
       size: "icon" as const,
       icon: <IconVideoFilled size={20} />,
     },
     {
       label: "Pinned Messages",
-      onClick: () => {},
+      onClick: () => { },
       variant: "ghost" as const,
       size: "icon" as const,
       icon: <IconPinFilled size={20} />,
+      popover: {
+        open: isPinnedMessagesPopoverOpen,
+        onOpenChange: setIsPinnedMessagesPopoverOpen,
+        content: currentChannel?.pinnedMessages && currentChannel?.pinnedMessages?.length > 0 ?
+          <ScrollArea className="h-full">
+            <div className="flex flex-col gap-2">
+              {currentChannel?.pinnedMessages?.map((message) => (
+                <Card key={message._id}>
+                  <CardHeader>
+                    <CardTitle>Pinned Message</CardTitle>
+                    <CardDescription>Pinned by {message.sentBy?.displayName}</CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          </ScrollArea>
+          :
+          <Empty className="w-full flex items-center justify-center">
+            <EmptyHeader>
+              <EmptyMedia variant="default" className="relative">
+                <IconPinFilled size={80} className="text-muted-foreground" />
+                <span className="absolute top-0 right-8 text-xs bg-muted-foreground w-0.5 h-20 rotate-135"></span>
+              </EmptyMedia>
+              <EmptyTitle>No pinned messages</EmptyTitle>
+              <EmptyDescription>This {getChannelTypeLabel(currentChannel?.type)} doesnt have any pinned messages yet.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>,
+      },
     },
     {
       label: "Add Friends to DM",
-      onClick: () => {},
+      onClick: () => { },
       variant: "ghost" as const,
       size: "icon" as const,
       icon: <IconUsersPlus size={20} />,
+      popover: {
+        open: isAddFriendsPopoverOpen,
+        onOpenChange: setIsAddFriendsPopoverOpen,
+        content: <div className="p-2">Add friends content</div>,
+      },
     },
     {
       label: ActiveUI.DIRECT_MESSAGES
@@ -236,8 +275,8 @@ const DashboardHeader = () => {
           ? "Hide User Profile"
           : "Show User Profile"
         : showChannelDetails
-        ? "Hide Member List"
-        : "Show Member List",
+          ? "Hide Member List"
+          : "Show Member List",
       onClick: () => dispatch(setShowChannelDetails(!showChannelDetails)),
       variant: "ghost" as const,
       size: "icon" as const,
@@ -246,7 +285,7 @@ const DashboardHeader = () => {
     },
     {
       label: null,
-      onClick: () => {},
+      onClick: () => { },
       variant: "ghost" as const,
       size: "default" as const,
       style: "hover:bg-transparent p-0",
@@ -297,6 +336,7 @@ const DashboardHeader = () => {
         );
       case ActiveUI.MESSAGE_REQUESTS:
         return (
+
           <div className="flex items-center gap-4 w-full">
             <h1 className="text-base font-medium">Message Requests</h1>
             <span className="text-muted-foreground text-sm">&#8226;</span>
@@ -311,6 +351,7 @@ const DashboardHeader = () => {
               <FriendsSelector friends={currentUserInfo.friends} currentUser={currentUserInfo} view={FriendsSelectorView.DASHBOARD} />
             </div>
           </div>
+
         );
       case ActiveUI.DIRECT_MESSAGES:
       case ActiveUI.GROUP: {
@@ -405,9 +446,8 @@ const DashboardHeader = () => {
                               </Button>
                             )}
                             <div
-                              className={`w-28 h-28 rounded-full border-2 border-dashed border-border flex items-center justify-center overflow-hidden transition-all group-hover:border-accent ${
-                                profileImageUrl ? "border-solid border-accent" : ""
-                              }`}
+                              className={`w-28 h-28 rounded-full border-2 border-dashed border-border flex items-center justify-center overflow-hidden transition-all group-hover:border-accent ${profileImageUrl ? "border-solid border-accent" : ""
+                                }`}
                             >
                               {profileImageUrl ? (
                                 <img src={profileImageUrl || "/placeholder.svg"} alt="Profile" className="w-full h-full object-cover" />
@@ -470,23 +510,44 @@ const DashboardHeader = () => {
                 )}
               </DialogContent>
             </Dialog>
-
             <div className="flex items-center gap-1">
-              {nonServerchannelButtons.map((button) => (
-                <Tooltip key={button.label}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size={button.size}
-                      variant={button.variant}
-                      onClick={button.onClick}
-                      className={`rounded-full ${button.isActive} ${button.style}`}
-                    >
-                      {button.icon}
-                    </Button>
-                  </TooltipTrigger>
-                  {button.label && <TooltipContent>{button.label}</TooltipContent>}
-                </Tooltip>
-              ))}
+              {nonServerchannelButtons.map((button) => {
+                const buttonContent = (
+                  <Button
+                    size={button.size}
+                    variant={button.variant}
+                    onClick={button.onClick}
+                    className={`rounded-full ${button.isActive} ${button.style}`}
+                  >
+                    {button.icon}
+                  </Button>
+                );
+
+                if (button.popover) {
+                  return (
+                    <Popover key={button.label} open={button.popover.open} onOpenChange={button.popover.onOpenChange}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <PopoverTrigger asChild>
+                            {buttonContent}
+                          </PopoverTrigger>
+                        </TooltipTrigger>
+                        {button.label && <TooltipContent>{button.label}</TooltipContent>}
+                      </Tooltip>
+                      <PopoverContent className="w-md">{button.popover.content}</PopoverContent>
+                    </Popover>
+                  );
+                }
+
+                return (
+                  <Tooltip key={button.label}>
+                    <TooltipTrigger asChild>
+                      {buttonContent}
+                    </TooltipTrigger>
+                    {button.label && <TooltipContent>{button.label}</TooltipContent>}
+                  </Tooltip>
+                );
+              })}
             </div>
           </div>
         );

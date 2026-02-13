@@ -14,7 +14,7 @@ import ReactionPicker from "./reaction-picker";
 import { Button } from "./ui/button";
 import { Popover, PopoverAnchor, PopoverContent } from "./ui/popover";
 import ProfileAvailabilityIndicator from "./profile-availability-indicator";
-import { useSendMessageMutation } from "~/redux/apis/channel.api";
+import { useSendMessageMutation, useUpdateMessageMutation } from "~/redux/apis/channel.api";
 import { MessageType } from "~/interfaces/message.interface";
 import { useAppSelector } from "~/redux/hooks";
 import { selectCurrentUserInfo } from "~/redux/slices/user/user-selector";
@@ -109,16 +109,18 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(({ items, comma
 MentionList.displayName = "MentionList";
 
 interface MessageInputProps {
-  onSend?: (content: string, mentions: string[]) => void;
   placeholder?: string;
   mentionSuggestions?: FriendInterface[];
   disabled?: boolean;
   className?: string;
   value?: string;
   channelId: string;
+  isEditing: boolean;
+  messageId?: string;
+  setIsEditing?: (isEditing: boolean) => void;
 }
 
-const MessageInput: React.FC<MessageInputProps> = ({ onSend, placeholder, mentionSuggestions = [], disabled = false, className, channelId, value }) => {
+const MessageInput: React.FC<MessageInputProps> = ({ placeholder, mentionSuggestions = [], disabled = false, className, channelId, value, isEditing, messageId, setIsEditing }) => {
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const [mentionOpen, setMentionOpen] = useState(false);
   const [mentionItems, setMentionItems] = useState<FriendInterface[]>([]);
@@ -126,6 +128,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, placeholder, mentio
   const containerRef = useRef<HTMLDivElement>(null);
   const mentionListRef = useRef<MentionListRef>(null);
   const [sendMessage] = useSendMessageMutation();
+  const [updateMessage] = useUpdateMessageMutation();
   const currentUserInfo = useAppSelector(selectCurrentUserInfo);
   const editor = useEditor({
     onUpdate: async ({ editor }) => {
@@ -227,33 +230,41 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, placeholder, mentio
   const handleSend = useCallback(async () => {
     if (!editor || editor.isEmpty) return;
 
-    const content = editor.getHTML();
+    // const content = editor.getHTML();
     const json = editor.getJSON();
 
     // Extract mention IDs from the content
-    const mentions: string[] = [];
-    const extractMentions = (node: Record<string, unknown>) => {
-      if (node.type === "mention" && node.attrs) {
-        const attrs = node.attrs as { id?: string };
-        if (attrs.id) {
-          mentions.push(attrs.id);
-        }
-      }
-      if (node.content && Array.isArray(node.content)) {
-        node.content.forEach((child) => extractMentions(child as Record<string, unknown>));
-      }
-    };
-    extractMentions(json as Record<string, unknown>);
+    // const mentions: string[] = [];
+    // const extractMentions = (node: Record<string, unknown>) => {
+    //   if (node.type === "mention" && node.attrs) {
+    //     const attrs = node.attrs as { id?: string };
+    //     if (attrs.id) {
+    //       mentions.push(attrs.id);
+    //     }
+    //   }
+    //   if (node.content && Array.isArray(node.content)) {
+    //     node.content.forEach((child) => extractMentions(child as Record<string, unknown>));
+    //   }
+    // };
+    // extractMentions(json as Record<string, unknown>);
     console.log(json); // we send this json to the server
-    await sendMessage({
-      referenceId: channelId,
-      message: json,
-      sentBy: currentUserInfo._id,
-      type: MessageType.TEXT,
-    });
-    onSend?.(content, mentions);
-    editor.commands.clearContent();
-  }, [editor, onSend]);
+    if (isEditing && messageId) {
+      setIsEditing?.(false);
+      await updateMessage({
+        messageId,
+        body: { referenceId: channelId, updateMessageDto: { message: json } },
+      });
+    } else {
+      editor.commands.clearContent();
+      await sendMessage({
+        referenceId: channelId,
+        message: json,
+        sentBy: currentUserInfo._id,
+        type: MessageType.TEXT,
+      });
+    }
+    // onSend?.(content, mentions);
+  }, [editor]);
 
   return (
     <Popover open={mentionOpen}>
