@@ -1,5 +1,6 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
 import { Channel } from "~/interfaces/channels.interface";
+import { MessageInterface, PinnedMessageInterface } from "~/interfaces/message.interface";
 import {
   FriendInterface,
   FriendRequest,
@@ -120,6 +121,38 @@ export const userSlice = createSlice({
         channel._id === action.payload.channelId ? { ...channel, listActive: action.payload.listActive } : channel
       );
     },
+    updateChannelPinnedMessage: (state, action: PayloadAction<{ message: PinnedMessageInterface; isPinned: boolean }>) => {
+      const { message, isPinned } = action.payload;
+      const channelId = message.referenceId._id;
+
+      state.channelsInfo = state.channelsInfo.map((channel) => {
+        if (channel._id !== channelId) return channel;
+
+        const currentPinnedMessages = channel.pinnedMessages || [];
+
+        if (isPinned) {
+          // Add message to pinned if not already there
+          const alreadyPinned = currentPinnedMessages.some((m) => m._id === message._id);
+          if (alreadyPinned) return channel;
+
+          // Normalize: convert referenceId from Channel object to string
+          const normalizedMessage: MessageInterface = {
+            ...message,
+            referenceId: channelId,
+          };
+          return {
+            ...channel,
+            pinnedMessages: [...currentPinnedMessages, normalizedMessage],
+          };
+        } else {
+          // Remove message from pinned
+          return {
+            ...channel,
+            pinnedMessages: currentPinnedMessages.filter((m) => m._id !== message._id),
+          };
+        }
+      });
+    },
   },
 });
 
@@ -136,5 +169,6 @@ export const {
   addChannel,
   addNotification,
   setChannelListActive,
+  updateChannelPinnedMessage,
 } = userSlice.actions;
 export default userSlice.reducer;

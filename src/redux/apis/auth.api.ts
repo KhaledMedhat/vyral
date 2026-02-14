@@ -22,11 +22,12 @@ import {
   setUserInfo,
   setUserLoggingInStatus,
   updateChannel,
+  updateChannelPinnedMessage,
 } from "~/redux/slices/user/user-slice";
 import { Channel, ChannelType } from "~/interfaces/channels.interface";
 import { socketService } from "~/lib/socket";
 import { getDirectMessageChannelOtherMember } from "~/lib/utils";
-import { updateCurrentChannel } from "../slices/app/app-slice";
+import { MessageInterface, PinnedMessageInterface } from "~/interfaces/message.interface";
 
 function isHydrateAction(action: Action): action is PayloadAction<RootState> {
   return action.type === HYDRATE;
@@ -147,17 +148,29 @@ export const authApi = createApi({
                 data.channel.type === ChannelType.Direct ? getDirectMessageChannelOtherMember(data.channel, currentUserId) : undefined,
             };
             dispatch(updateChannel(channelWithExtras));
-            dispatch(updateCurrentChannel(channelWithExtras));
           };
+
+
+          const handlePinMessage = (data: { message: PinnedMessageInterface; isPinned: boolean }) => {
+            dispatch(updateChannelPinnedMessage({ message: data.message, isPinned: data.isPinned }));
+          };
+          const handleUnpinMessage = (data: { message: PinnedMessageInterface; isPinned: boolean }) => {
+            dispatch(updateChannelPinnedMessage({ message: data.message, isPinned: data.isPinned }));
+          };
+
           socket?.on("friendRequest", handleFriendRequest);
           socket?.on("friendRequestAcceptanceChannelCreation", handleFriendRequestAcceptanceForChannel);
           socket?.on("friendRequestAcceptanceNotification", handleFriendRequestAcceptanceForNotification);
           socket?.on("updateGroupChannel", handleChannelUpdate);
+          socket?.on("pinMessage", handlePinMessage);
+          socket?.on("unpinMessage", handleUnpinMessage);
           await cacheEntryRemoved;
           socket?.off("friendRequest", handleFriendRequest);
           socket?.off("friendRequestAcceptanceChannelCreation", handleFriendRequestAcceptanceForChannel);
           socket?.off("friendRequestAcceptanceNotification", handleFriendRequestAcceptanceForNotification);
           socket?.off("updateGroupChannel", handleChannelUpdate);
+          socket?.off("pinMessage", handlePinMessage);
+          socket?.off("unpinMessage", handleUnpinMessage);
         } catch (error) {
           console.error("Socket cache entry error:", error);
         }

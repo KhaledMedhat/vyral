@@ -7,18 +7,17 @@ import {
   selectCurrentChannel,
   selectDashboardFriendsHeaderActiveUI,
   selectDashboardMessageRequestsHeaderActiveUI,
+  selectIsPinnedMessagesOpen,
   selectShowChannelDetails,
 } from "~/redux/slices/app/app-selector";
 import { ActiveUI, ConfigPrefix, FriendsSelectorView, FriendsView, MessageRequestsView } from "~/interfaces/app.interface";
-import { setDashboardFriendsHeaderActiveUI, setDashboardMessageRequestsHeaderActiveUI, setShowChannelDetails } from "~/redux/slices/app/app-slice";
+import { setDashboardFriendsHeaderActiveUI, setDashboardMessageRequestsHeaderActiveUI, setIsPinnedMessagesOpen, setShowChannelDetails } from "~/redux/slices/app/app-slice";
 import { selectCurrentUserInfo, selectFriendRequests } from "~/redux/slices/user/user-selector";
 import FriendsSelector from "./friends-selector";
 import {
-  IconAt,
   IconPencil,
   IconPhoneCall,
   IconPhotoPlus,
-  IconPin,
   IconPinFilled,
   IconSearch,
   IconUsers,
@@ -40,30 +39,35 @@ import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { editGroupSchema, EditGroupValues } from "~/lib/validation";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "./ui/form";
 import { Spinner } from "./ui/spinner";
-import { useUpdateChannelMutation } from "~/redux/apis/channel.api";
+import { useUnpinMessageMutation, useUpdateChannelMutation } from "~/redux/apis/channel.api";
 import useUpload from "~/hooks/use-upload";
 import { SHORT_LOGO_URL } from "~/constants/constants";
 import { ImageCropper } from "./image-cropper";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./ui/empty";
-import { getChannelTypeLabel } from "~/lib/utils";
+import { formatDate, getChannelTypeLabel, getInitialsFallback } from "~/lib/utils";
 import { ScrollArea } from "./ui/scroll-area";
-import { Card, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent } from "./ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import Link from "next/link";
+import { useScrollToMessage } from "~/hooks/use-scroll-to-message";
+import { useChannelMessages } from "~/hooks/use-channel-messages";
+import { useScrollContext } from "~/contexts/scroll-context";
 
 const DashboardHeader = () => {
   const [isChannelDialogOpen, setIsChannelDialogOpen] = useState<boolean>(false);
   const [isUploadingLoading, setIsUploadingLoading] = useState<boolean>(false);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [hasDeletedExistingLogo, setHasDeletedExistingLogo] = useState<boolean>(false);
-  const [isPinnedMessagesPopoverOpen, setIsPinnedMessagesPopoverOpen] = useState<boolean>(false);
   const [isAddFriendsPopoverOpen, setIsAddFriendsPopoverOpen] = useState<boolean>(false);
   // Cropper states
   const [isCropping, setIsCropping] = useState<boolean>(false);
   const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
 
   const [updateChannel, { isLoading: isUpdatingChannel }] = useUpdateChannelMutation();
+  const [unpinMessage] = useUnpinMessageMutation();
   const { startUpload } = useUpload(setIsUploadingLoading, ConfigPrefix.SINGLE_IMAGE_UPLOADER);
   const activeUI = useAppSelector(selectActiveUI);
   const dashboardFriendsHeaderActiveUI = useAppSelector(selectDashboardFriendsHeaderActiveUI);
@@ -72,7 +76,19 @@ const DashboardHeader = () => {
   const showChannelDetails = useAppSelector(selectShowChannelDetails);
   const currentChannel = useAppSelector(selectCurrentChannel);
   const friendRequests = useAppSelector(selectFriendRequests);
+  const isPinnedMessagesOpen = useAppSelector(selectIsPinnedMessagesOpen);
   const dispatch = useAppDispatch();
+  const { scrollContainerRef } = useScrollContext();
+
+  const { messages, isLoadingMore, hasMore, loadMoreMessages } = useChannelMessages(currentChannel?._id || "");
+
+  const { scrollToMessage } = useScrollToMessage({
+    messages,
+    hasMore,
+    isLoadingMore,
+    loadMoreMessages,
+    scrollContainerRef,
+  });
 
   const editGroupForm = useForm<EditGroupValues>({
     resolver: zodResolver(editGroupSchema),
@@ -229,17 +245,45 @@ const DashboardHeader = () => {
       size: "icon" as const,
       icon: <IconPinFilled size={20} />,
       popover: {
-        open: isPinnedMessagesPopoverOpen,
-        onOpenChange: setIsPinnedMessagesPopoverOpen,
+        open: isPinnedMessagesOpen,
+        onOpenChange: (open: boolean) => dispatch(setIsPinnedMessagesOpen(open)),
         content: currentChannel?.pinnedMessages && currentChannel?.pinnedMessages?.length > 0 ?
-          <ScrollArea className="h-full">
+          <ScrollArea className="h-90 px-4">
             <div className="flex flex-col gap-2">
-              {currentChannel?.pinnedMessages?.map((message) => (
-                <Card key={message._id}>
-                  <CardHeader>
-                    <CardTitle>Pinned Message</CardTitle>
-                    <CardDescription>Pinned by {message.sentBy?.displayName}</CardDescription>
-                  </CardHeader>
+              <div className="flex items-center gap-2">
+                <IconPinFilled size={30} />
+                <h1 className="text-lg font-semibold">Pinned Messages</h1>
+              </div>
+              {currentChannel?.pinnedMessages?.slice().reverse().map((message) => (
+                <Card key={message._id} className="relative group">
+                  <div className="hidden group-hover:flex items-center absolute top-2 right-2">
+                    <Button variant="outline" className="h-8" onClick={() => scrollToMessage(message._id)}>
+                      Jump
+                    </Button>
+                    <Button variant="outline" size="icon-sm" onClick={() => unpinMessage({
+                      channelId: currentChannel?._id || "",
+                      messageId: message._id,
+                    })}>
+                      <IconX size={16} />
+                    </Button>
+                  </div>
+                  <CardContent>
+                    <div className="flex items-start gap-2">
+                      <Avatar className="size-10">
+                        <AvatarImage src={message.sentBy?.profilePicture} />
+                        <AvatarFallback>
+                          {getInitialsFallback(message.sentBy?.displayName)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col items-start">
+                        <div className="flex items-center gap-1">
+                          <p className="text-sm font-medium">{message.sentBy?.displayName}</p>
+                          <p className="text-xs text-muted-foreground">{formatDate(message.createdAt?.toString(), 'md')}</p>
+                        </div>
+                        <p className="text-sm">{message.message.content?.[0].content?.[0].text}</p>
+                      </div>
+                    </div>
+                  </CardContent>
                 </Card>
               ))}
             </div>
@@ -525,7 +569,7 @@ const DashboardHeader = () => {
 
                 if (button.popover) {
                   return (
-                    <Popover key={button.label} open={button.popover.open} onOpenChange={button.popover.onOpenChange}>
+                    <Popover key={button.label} open={button.popover.open} onOpenChange={(open) => dispatch(setIsPinnedMessagesOpen(open))}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <PopoverTrigger asChild>
@@ -534,7 +578,7 @@ const DashboardHeader = () => {
                         </TooltipTrigger>
                         {button.label && <TooltipContent>{button.label}</TooltipContent>}
                       </Tooltip>
-                      <PopoverContent className="w-md">{button.popover.content}</PopoverContent>
+                      <PopoverContent className="w-md px-1">{button.popover.content}</PopoverContent>
                     </Popover>
                   );
                 }

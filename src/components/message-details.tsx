@@ -13,8 +13,8 @@ const MessageDetails: React.FC<{ message: MessageInterface, isPinComponent: bool
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false)
     // const [unpinMessage] = useUnpinMessageMutation()
     return (
-        <div className="p-4 bg-muted rounded-md flex flex-col relative w-full" onMouseEnter={() => setMessageDetailsId(message._id)} onMouseLeave={() => setMessageDetailsId(null)}>
-            {messageDetailsId === message._id && isPinComponent &&
+        <div className="p-4 bg-muted rounded-md flex flex-col relative w-full">
+            {/* {messageDetailsId === message._id && isPinComponent &&
                 <div className="absolute top-2 right-2 flex items-center gap-1">
                     <Link href={`#${message._id}`}>
                         <Badge variant="outline" className="cursor-pointer text-xs rounded-md hover:bg-hover">
@@ -34,7 +34,7 @@ const MessageDetails: React.FC<{ message: MessageInterface, isPinComponent: bool
                             </DialogDescription>
                             <MessageDetails message={message} isPinComponent={false} />
                             <div className="w-full flex items-start flex-col p-4">
-                                <p className="text-sm font-semibold text-primary">PRO TIP :</p>
+                                <p className="text-sm font-semibold text-accent">PRO TIP :</p>
                                 <p className="text-sm">You can unpin messages from its context menu.</p>
                             </div>
                             <DialogFooter>
@@ -51,7 +51,8 @@ const MessageDetails: React.FC<{ message: MessageInterface, isPinComponent: bool
                     </Dialog>
 
                 </div>
-            }
+            } */}
+
             <div className="flex items-start gap-2">
                 <Avatar className="size-12">
                     <AvatarImage src={message.sentBy?.profilePicture} />
@@ -68,8 +69,8 @@ const MessageDetails: React.FC<{ message: MessageInterface, isPinComponent: bool
                         <div className="w-full h-fit pt-0.5 flex items-center gap-1">
                             {message.message &&
                                 message.message.content?.[0].content?.map((msg, idx) => (
-                                    <span key={idx} className="h-5">
-                                        <p className="text-sm">{msg.type === 'text' && msg.text}</p>
+                                    <span key={idx}>
+                                        <p className="text-sm break-all">{msg.type === 'text' && msg.text}</p>
                                         {msg.type === 'mention' && (
                                             <p className="bg-mention px-1 text-mention-secondary font-semibold rounded no-underline text-sm">
                                                 {msg.attrs?.mentionSuggestionChar}{msg.attrs?.label}

@@ -17,7 +17,7 @@ import { Spinner } from "./ui/spinner";
 import { ActiveUI, FriendsSelectorView } from "~/interfaces/app.interface";
 import { useAppDispatch, useAppSelector } from "~/redux/hooks";
 import { selectCurrentUserChannels } from "~/redux/slices/user/user-selector";
-import { setActiveUI, setCurrentChannel } from "~/redux/slices/app/app-slice";
+import { setActiveUI, setCurrentChannelId } from "~/redux/slices/app/app-slice";
 import { setChannelListActive } from "~/redux/slices/user/user-slice";
 
 const FriendsSelector: React.FC<{ friends: FriendInterface[]; currentUser: User; view: FriendsSelectorView; otherUser?: FriendInterface[] }> = ({
@@ -99,7 +99,7 @@ const FriendsSelector: React.FC<{ friends: FriendInterface[]; currentUser: User;
       const directedChannel = currentUserChannels.find((channel) => channel.members.some((member) => member._id === selectedFriends[0]._id));
       dispatch(setChannelListActive({ channelId: directedChannel?._id || "", listActive: true }));
       router.push(`/dm/${selectedFriends[0]._id}`);
-      directedChannel && dispatch(setCurrentChannel(directedChannel));
+      directedChannel && dispatch(setCurrentChannelId(directedChannel._id));
       dispatch(setActiveUI(ActiveUI.DIRECT_MESSAGES));
       setOpenPopover(false);
       setSelectedFriends([]);
@@ -113,7 +113,7 @@ const FriendsSelector: React.FC<{ friends: FriendInterface[]; currentUser: User;
         .unwrap()
         .then((res) => {
           router.push(`/group/${res.data.route}`);
-          dispatch(setCurrentChannel(res.data.channel));
+          dispatch(setCurrentChannelId(res.data.channel._id));
           dispatch(setActiveUI(ActiveUI.GROUP));
           setSelectedFriends([]);
           setOpenPopover(false);

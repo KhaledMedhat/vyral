@@ -1,4 +1,4 @@
-import { Channel } from "./channels.interface";
+import { MessageInterface } from "./message.interface";
 
 export enum ConfigPrefix {
   SINGLE_IMAGE_UPLOADER = "singleImageUploader",
@@ -46,5 +46,10 @@ export interface AppInitialState {
   showChannelDetails: boolean;
   friendsHeaderActiveUI: FriendsView;
   messageRequestsHeaderActiveUI: MessageRequestsView;
-  currentChannel: Channel | null;
+  isPinnedMessagesOpen: boolean;
+  currentChannelId: string | null;
+  isReplying: boolean;
+  replyingToMessage: MessageInterface | null;
 }
+
+export type RecordingState = "idle" | "recording" | "paused"

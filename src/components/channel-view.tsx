@@ -1,7 +1,7 @@
 "use client";
 
 import { useAppSelector } from "~/redux/hooks";
-import { selectCurrentChannel, selectShowChannelDetails } from "~/redux/slices/app/app-selector";
+import { selectCurrentChannel, selectIsReplying, selectReplyingToMessage, selectShowChannelDetails } from "~/redux/slices/app/app-selector";
 import MessageInput from "./message-input";
 import { ChannelType } from "~/interfaces/channels.interface";
 import { ScrollArea } from "./ui/scroll-area";
@@ -9,9 +9,11 @@ import Message from "./message";
 import { MessageInterface, MessageType } from "~/interfaces/message.interface";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChannelMessages } from "~/hooks/use-channel-messages";
+import { useScrollToMessage } from "~/hooks/use-scroll-to-message";
 import { Button } from "./ui/button";
 import { IconChevronDown } from "@tabler/icons-react";
 import { MessageSkeletonList, LoadingMoreSkeleton } from "./message-skeleton";
+import { useScrollContext } from "~/contexts/scroll-context";
 
 const ChannelView: React.FC<{ channelId: string }> = ({ channelId }) => {
   const currentChannel = useAppSelector(selectCurrentChannel);
@@ -19,8 +21,20 @@ const ChannelView: React.FC<{ channelId: string }> = ({ channelId }) => {
   const { messages, isLoading, isLoadingMore, hasMore, loadMoreMessages, isSomeoneTyping } = useChannelMessages(channelId);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [showScrollButton, setShowScrollButton] = useState<boolean>(false);
+  const { scrollContainerRef } = useScrollContext();
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const prevScrollHeightRef = useRef<number>(0);
+  const isReplying = useAppSelector(selectIsReplying);
+  const replyingToMessage = useAppSelector(selectReplyingToMessage);
+  // Sync local ref with global context
+  useEffect(() => {
+    if (scrollViewportRef.current) {
+      scrollContainerRef.current = scrollViewportRef.current;
+    }
+    return () => {
+      scrollContainerRef.current = null;
+    };
+  }, [scrollContainerRef]);
   const initialScrollDone = useRef<boolean>(false);
   const prevMessagesLength = useRef<number>(0);
 
@@ -121,6 +135,15 @@ const ChannelView: React.FC<{ channelId: string }> = ({ channelId }) => {
   const showScrollButtonRef = useRef(false);
   const scrollThrottleRef = useRef(false);
 
+  // Scroll to message hook (handles loading older messages if needed)
+  const { scrollToMessage } = useScrollToMessage({
+    messages,
+    hasMore,
+    isLoadingMore,
+    loadMoreMessages,
+    scrollContainerRef: scrollViewportRef,
+  });
+
   // Memoize processed messages to avoid recalculating on every render
   const processedMessages = useMemo(() => processMessages(messages || []), [messages]);
 
@@ -133,7 +156,7 @@ const ChannelView: React.FC<{ channelId: string }> = ({ channelId }) => {
           {isLoading ? (
             <MessageSkeletonList count={8} />
           ) : (
-            <div className="pb-14">
+            <div className={`${isReplying && replyingToMessage ? "pb-24" : "pb-14"}`}>
               {/* Loading more skeleton at top */}
               {isLoadingMore && <LoadingMoreSkeleton />}
 
@@ -169,6 +192,7 @@ const ChannelView: React.FC<{ channelId: string }> = ({ channelId }) => {
                         onLeave={handleMessageLeave}
                         channel={currentChannel || undefined}
                         otherUsers={currentChannel?.members}
+                        onScrollToMessage={scrollToMessage}
                       />
                     )}
                   </div>

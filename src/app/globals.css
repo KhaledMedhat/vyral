@@ -135,6 +135,7 @@
   * {
     @apply border-border outline-ring/50;
     scrollbar-width: thin;
+    scroll-behavior: smooth;
     scrollbar-color: oklch(from var(--scrollbar-thumb) l c h / 0.4) transparent;
   }
 
@@ -239,4 +240,5 @@
       background-position: 0% 50%, 50% 50%, 100% 100%;
     }
   }
+
 }

@@ -96,8 +96,8 @@ export default function StatusPage() {
             <CardDescription>Past incidents and their resolutions</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {incidents.map((incident, index) => (
-              <div key={index} className="border-l-2 border-green-500 pl-4">
+            {incidents.map((incident) => (
+              <div key={incident.title} className="border-l-2 border-green-500 pl-4">
                 <div className="flex items-center gap-2 mb-1">
                   <IconClock className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">{incident.date}</span>

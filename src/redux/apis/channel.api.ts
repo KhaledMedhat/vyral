@@ -2,7 +2,6 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { Channel, CreateChannelBody, CreateChannelResponse, UpdateChannelBody } from "~/interfaces/channels.interface";
 import { authApi } from "./auth.api";
 import { AddMessageBody, MessageInterface, UpdateMessageBody } from "~/interfaces/message.interface";
-import { updateCurrentChannel } from "../slices/app/app-slice";
 
 export const channelApi = createApi({
   reducerPath: "channelApi",
@@ -72,16 +71,23 @@ export const channelApi = createApi({
       }),
     }),
     pinMessage: builder.mutation<void, { channelId: string; messageId: string; pinnedBy: { id: string; label: string } }>({
-      query: (body) => ({
-        url: `/channels/pin-message/${body.channelId}`,
+      query: (args) => ({
+        url: `/channels/pin-message/${args.channelId}/${args.messageId}`,
         method: "PATCH",
-        body,
+        body: args.pinnedBy,
       }),
     }),
     unpinMessage: builder.mutation<void, { channelId: string; messageId: string }>({
-      query: (body) => ({
-        url: `/messages/unpin-message/${body.channelId}/${body.messageId}`,
+      query: (args) => ({
+        url: `/channels/unpin-message/${args.channelId}/${args.messageId}`,
         method: "PATCH",
+      }),
+    }),
+    toggleReaction: builder.mutation<void, { messageId: string; reaction: { emoji: string; userId: string } }>({
+      query: (args) => ({
+        url: `/messages/toggle-reaction/${args.messageId}`,
+        method: "PATCH",
+        body: args.reaction,
       }),
     }),
   }),
@@ -98,4 +104,5 @@ export const {
   useUpdateMessageMutation,
   usePinMessageMutation,
   useUnpinMessageMutation,
+  useToggleReactionMutation,
 } = channelApi;

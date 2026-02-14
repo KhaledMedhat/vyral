@@ -24,7 +24,7 @@ import { useRemoveFriendMutation } from "~/redux/apis/auth.api";
 import { useAcceptFriendRequestMutation, useRejectFriendRequestMutation, useSendFriendRequestMutation } from "~/redux/apis/user.api";
 import { useAppDispatch, useAppSelector } from "~/redux/hooks";
 import { selectActiveUI, selectDashboardFriendsHeaderActiveUI, selectDashboardMessageRequestsHeaderActiveUI } from "~/redux/slices/app/app-selector";
-import { setActiveUI, setCurrentChannel } from "~/redux/slices/app/app-slice";
+import { setActiveUI, setCurrentChannelId } from "~/redux/slices/app/app-slice";
 import { selectCurrentUserChannels, selectCurrentUserInfo, selectFriendRequests } from "~/redux/slices/user/user-selector";
 
 export default function ChannelsPage() {
@@ -74,7 +74,7 @@ export default function ChannelsPage() {
               onClick={() => {
                 const directChannel = extractDirectChannelFromMembers(currentUserInfo._id, currentUserChannels, friendId);
                 if (directChannel) {
-                  dispatch(setCurrentChannel(directChannel));
+                  dispatch(setCurrentChannelId(directChannel._id));
                   dispatch(setActiveUI(ActiveUI.DIRECT_MESSAGES));
                   router.push(`/dm/${directChannel._id}`);
                 } else {

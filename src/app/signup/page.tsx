@@ -281,9 +281,8 @@ export default function SignupPage() {
             <div className="relative min-h-[420px]">
               {/* Step 1 Form */}
               <div
-                className={`transition-all duration-500 ease-in-out ${
-                  step === 1 ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-full absolute inset-0 pointer-events-none"
-                }`}
+                className={`transition-all duration-500 ease-in-out ${step === 1 ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-full absolute inset-0 pointer-events-none"
+                  }`}
               >
                 <Form {...step1Form}>
                   <form onSubmit={step1Form.handleSubmit(onStep1Submit)} className="space-y-4">
@@ -365,12 +364,11 @@ export default function SignupPage() {
                           <FormMessage />
                           {password.length > 0 && (
                             <div className="grid grid-cols-2 gap-2 pt-2">
-                              {passwordRequirements.map((req, index) => (
-                                <div key={index} className="flex items-center gap-1.5 text-xs">
+                              {passwordRequirements.map((req) => (
+                                <div key={req.label} className="flex items-center gap-1.5 text-xs">
                                   <div
-                                    className={`h-3.5 w-3.5 rounded-full flex items-center justify-center ${
-                                      req.met ? "bg-accent text-accent-foreground" : "bg-muted"
-                                    }`}
+                                    className={`h-3.5 w-3.5 rounded-full flex items-center justify-center ${req.met ? "bg-accent text-accent-foreground" : "bg-muted"
+                                      }`}
                                   >
                                     {req.met && <IconCheck className="h-2.5 w-2.5" />}
                                   </div>
@@ -451,9 +449,8 @@ export default function SignupPage() {
 
               {/* Step 2 Form */}
               <div
-                className={`transition-all duration-500 ease-in-out ${
-                  step === 2 ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full absolute inset-0 pointer-events-none"
-                }`}
+                className={`transition-all duration-500 ease-in-out ${step === 2 ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full absolute inset-0 pointer-events-none"
+                  }`}
               >
                 {isCropping && originalImageUrl ? (
                   <ImageCropperInline
@@ -481,9 +478,8 @@ export default function SignupPage() {
                             </Button>
                           )}
                           <div
-                            className={`w-28 h-28 rounded-full border-2 border-dashed border-border flex items-center justify-center overflow-hidden transition-all group-hover:border-accent ${
-                              profileImageUrl ? "border-solid border-accent" : ""
-                            }`}
+                            className={`w-28 h-28 rounded-full border-2 border-dashed border-border flex items-center justify-center overflow-hidden transition-all group-hover:border-accent ${profileImageUrl ? "border-solid border-accent" : ""
+                              }`}
                           >
                             {profileImageUrl ? (
                               <img src={profileImageUrl || "/placeholder.svg"} alt="Profile" className="w-full h-full object-cover" />

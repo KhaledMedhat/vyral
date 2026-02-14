@@ -1,9 +1,25 @@
+import { Channel } from "./channels.interface";
 import { FriendInterface, User } from "./user.interface";
 import { JSONContent } from "@tiptap/react";
 
 export interface MessageInterface {
   _id: string;
   referenceId: string;
+  message: JSONContent;
+  attachment: Attachment[];
+  sentBy?: FriendInterface;
+  createdAt?: Date;
+  updatedAt?: Date;
+  reactions: ReactionInterface[];
+  isPinned?: boolean;
+  type: MessageType;
+  replyMessageId?: MessageInterface;
+  forwardMessageId?: string;
+}
+
+export interface PinnedMessageInterface {
+  _id: string;
+  referenceId: Channel;
   message: JSONContent;
   attachment: Attachment[];
   sentBy?: FriendInterface;
@@ -45,8 +61,10 @@ export interface ReactionInterface {
 }
 
 export enum MessageType {
-  TEXT = "Text",
-  REPLY = "Reply",
-  FORWARD = "Forward",
-  SYSTEM = "System",
+  TEXT = 'Text',
+  REPLY = 'Reply',
+  FORWARD = 'Forward',
+  PINNED_MSG_SYSTEM = 'PinnedMessageSystem',
+  CALL_END_MSG_SYSTEM = 'CallEndMessageSystem',
+  CALL_MISSED_MSG_SYSTEM = 'CallMissedMessageSystem',
 }

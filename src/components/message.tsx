@@ -4,7 +4,7 @@ import { MessageType, type MessageInterface } from "~/interfaces/message.interfa
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useState, memo, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { FriendInterface } from "~/interfaces/user.interface";
 import {
     ContextMenu,
@@ -16,7 +16,7 @@ import {
     ContextMenuSubTrigger,
     ContextMenuTrigger,
 } from "./ui/context-menu";
-import { PencilIcon, Copy, Pin, TrashIcon } from "lucide-react";
+import { PencilIcon, Copy, Pin } from "lucide-react";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -26,27 +26,30 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from "./ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
-import { JSONContent } from "@tiptap/react";
-import { IconCornerUpRight, IconCornerUpLeft, IconBorderCornerRounded, IconTrash } from "@tabler/icons-react";
-import Link from "next/link";
+import { IconCornerUpRight, IconCornerUpLeft, IconBorderCornerRounded, IconTrash, IconDots } from "@tabler/icons-react";
 import { Channel } from "~/interfaces/channels.interface";
 import { useAppDispatch, useAppSelector } from "~/redux/hooks";
 import { selectCurrentUserInfo } from "~/redux/slices/user/user-selector";
-import { formatDate, getInitialsFallback } from "~/lib/utils";
+import { formatDate, getInitialsFallback, scrollToMessage } from "~/lib/utils";
 import MessageDetails from "./message-details";
 import ProfileAvailabilityIndicator from "./profile-availability-indicator";
 import { REACTION_EMOJIS } from "~/constants/constants";
 import { EmojiPicker, EmojiPickerContent, EmojiPickerFooter, EmojiPickerSearch } from "./ui/emoji-picker";
 import MessageInput from "./message-input";
-import { useDeleteMessageMutation } from "~/redux/apis/channel.api";
+import { useDeleteMessageMutation, usePinMessageMutation, useToggleReactionMutation, useUnpinMessageMutation } from "~/redux/apis/channel.api";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { setIsPinnedMessagesOpen, setIsReplying, setReplyingToMessage } from "~/redux/slices/app/app-slice";
+import ForwardMessage from "./forward-message";
+import { Separator } from "./ui/separator";
+import ReactionPicker from "./reaction-picker";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSubTrigger, DropdownMenuSub, DropdownMenuTrigger, DropdownMenuSubContent, DropdownMenuSeparator } from "./ui/dropdown-menu";
+import UserDetails from "./user-details";
+import { selectIsReplying, selectReplyingToMessage } from "~/redux/slices/app/app-selector";
 
 
 interface MessageComponentProps {
-    setReplyingToMessage?: (message: MessageInterface | null) => void;
-    replyingToMessage?: MessageInterface | null;
     otherUsers: FriendInterface[] | undefined;
     message: MessageInterface;
     showHeader: boolean;
@@ -54,25 +57,65 @@ interface MessageComponentProps {
     onHover: (messageId: string) => void;
     onLeave: () => void;
     channel: Channel | undefined;
-    setIsPinnedMessagesOpen?: (isPinnedMessagesOpen: boolean) => void;
+    onScrollToMessage: (messageId: string) => void;
 }
 const Message = memo<MessageComponentProps>(
-    ({ setReplyingToMessage, replyingToMessage, channel, otherUsers, message, showHeader, isHovered, onHover, onLeave, setIsPinnedMessagesOpen }) => {
+    ({ channel, otherUsers, message, showHeader, isHovered, onHover, onLeave, onScrollToMessage }) => {
         const [deleteMessage] = useDeleteMessageMutation();
-        // const [updateMessage] = useUpdateMessageMutation();
-        // const [pinMessage] = usePinMessageMutation();
-        // const [unpinMessage] = useUnpinMessageMutation();
+        const [pinMessage] = usePinMessageMutation();
+        const [unpinMessage] = useUnpinMessageMutation();
         const dispatch = useAppDispatch();
         const currentUser = useAppSelector(selectCurrentUserInfo);
         const [isEditing, setIsEditing] = useState<boolean>(false);
-        // const [makeReaction, { isLoading: isMakingReaction }] = useToggleReactionMutation();
+        const [makeReaction] = useToggleReactionMutation();
         const [isDropdownOpen, setIsDropdownOpen] = useState(false); // Add this state
-        const [emojiPickerFromDropdownOpen, setEmojiPickerFromDropdownOpen] = useState<boolean>(false);
         const [isForwardDialogOpen, setIsForwardDialogOpen] = useState<boolean>(false);
         const [isPinDialogOpen, setIsPinDialogOpen] = useState<boolean>(false);
         const [isPinAlertDialogOpen, setIsPinAlertDialogOpen] = useState<boolean>(false);
         const [isDeleteAlertDialogOpen, setIsDeleteAlertDialogOpen] = useState<boolean>(false);
+        const [isHighlighted, setIsHighlighted] = useState<boolean>(false);
+        const isReplying = useAppSelector(selectIsReplying);
+        const replyingToMessage = useAppSelector(selectReplyingToMessage);
         const isSameUser = message.sentBy?._id === currentUser?._id;
+
+        const MessageEmojiPoisition = () => {
+            switch (message.type) {
+                case MessageType.TEXT:
+                    return "ml-16";
+                case MessageType.REPLY:
+                    return "ml-16";
+                case MessageType.FORWARD:
+                    return "ml-19";
+                case MessageType.PINNED_MSG_SYSTEM:
+                    return "ml-10";
+                case MessageType.CALL_END_MSG_SYSTEM:
+                    return "ml-10";
+                case MessageType.CALL_MISSED_MSG_SYSTEM:
+                    return "ml-10";
+                default:
+                    return "ml-16";
+            }
+        }
+
+        // Handle hash navigation highlight effect
+        useEffect(() => {
+            const checkHash = () => {
+                if (window.location.hash === `#${message._id}`) {
+                    setIsHighlighted(true);
+                    const timer = setTimeout(() => {
+                        setIsHighlighted(false);
+                    }, 3000);
+                    return () => clearTimeout(timer);
+                }
+            };
+
+            // Check on mount
+            checkHash();
+
+            // Listen for hash changes
+            window.addEventListener("hashchange", checkHash);
+            return () => window.removeEventListener("hashchange", checkHash);
+        }, [message._id]);
 
         // Handle Escape key to cancel editing
         useEffect(() => {
@@ -88,16 +131,6 @@ const Message = memo<MessageComponentProps>(
             return () => document.removeEventListener("keydown", handleKeyDown);
         }, [isEditing]);
 
-        // const updateMessageHandler = async (newMessage: JSONContent) => {
-        //     await updateMessage({
-        //         messageId: message._id,
-        //         body: { message: newMessage },
-        //     })
-        //         .unwrap()
-        //         .then(() => {
-        //             setIsEditing(false);
-        //         });
-        // };
         const handleMouseEnter = useCallback(() => {
             onHover(message._id);
         }, [message._id, onHover]);
@@ -110,42 +143,35 @@ const Message = memo<MessageComponentProps>(
         return (
             <Dialog open={isForwardDialogOpen || isPinDialogOpen} onOpenChange={setIsForwardDialogOpen || setIsPinDialogOpen}>
                 <AlertDialog open={isPinAlertDialogOpen || isDeleteAlertDialogOpen} onOpenChange={setIsPinAlertDialogOpen || setIsDeleteAlertDialogOpen}>
-                    <ContextMenu>
+                    <ContextMenu >
                         <ContextMenuTrigger className="w-full">
                             <div
                                 id={message._id}
-                                className={`group relative px-4 -mx-4 cursor-default transition-colors duration-75 ${message._id && replyingToMessage?._id === message._id && "bg-primary/40"
-                                    } ${isHovered && "bg-main"} ${showHeader && "mt-4"} ${message.type === MessageType.REPLY && "pt-1"}`}
+                                className={`group relative px-4 -mx-4 cursor-default transition-colors duration-75 ${message._id && isReplying && replyingToMessage?._id === message._id && "bg-accent/40 hover:bg-accent/40"
+                                    } ${isHovered && "bg-main"} ${showHeader && "mt-4"} ${message.type === MessageType.REPLY && "pt-1"} ${isHighlighted && "animate-pulse bg-accent/30"}`}
                                 onMouseEnter={handleMouseEnter}
                                 onMouseLeave={handleMouseLeave}
                             >
                                 {message.type === MessageType.REPLY && message.replyMessageId && (
                                     <div className="pl-4 flex items-end">
-                                        <Link href={`#${message.message.message.replyMessageId?._id}`}>
-                                            <IconBorderCornerRounded stroke={2} className="text-muted-foreground hover:text-accent" />
-                                        </Link>
+                                        <button
+                                            onClick={() => scrollToMessage(message.message.message.replyMessageId?._id || "", onScrollToMessage)}
+                                            className="cursor-pointer"
+                                        >
+                                            <IconBorderCornerRounded stroke={2} className="text-muted-foreground hover:text-accent/40" />
+                                        </button>
                                         <div className="flex items-center gap-1">
-                                            <ProfileAvailabilityIndicator
-                                                size="sm"
-                                                status={message.replyMessageId?.sentBy?.status.type}
-                                                imageUrl={message.replyMessageId?.sentBy?.profilePicture || ""}
-                                                name={message.replyMessageId?.sentBy?.displayName || ""}
-                                            />
-                                            {/* <Avatar className="size-7">
-                      <AvatarImage src={message.replyMessageId?.sentBy?.profilePicture} />
-                      <AvatarFallback>{getInitials(message.replyMessageId?.sentBy?.displayName)}</AvatarFallback>
-                    </Avatar>
-                    <ProfileNavigator
-                      channelType={channel?.type ?? ChannelType.Direct}
-                      isMentionReply={true}
-                      isSameUser={message.replyMessageId?.sentBy?._id === currentUser?._id}
-                      currentUser={currentUser}
-                      member={message.replyMessageId?.sentBy}
-                      isMention={true}
-                      mentionTrigger={`@${message.replyMessageId?.sentBy?.displayName}`}
-                    /> */}
-                                            <Link href={`#${message.replyMessageId?._id}`} className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                                                {message.message.content?.[0].content?.map((msg, idx) => (
+                                            <Avatar className="size-7 bg-muted">
+                                                <AvatarImage src={message.replyMessageId?.sentBy?.profilePicture || ""} />
+                                                <AvatarFallback>
+                                                    {message.replyMessageId?.sentBy?.displayName?.charAt(0)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <button
+                                                className="flex items-center gap-0.5 text-xs text-muted-foreground cursor-pointer"
+                                                onClick={() => scrollToMessage(message.replyMessageId?._id || "", onScrollToMessage)}
+                                            >
+                                                {message.replyMessageId.message.content?.[0].content?.map((msg, idx) => (
                                                     <span key={idx} className="flex flex-col items-start font-semibold">
                                                         <p>{msg.type === "text" && msg.text}</p>
                                                         {msg.type === "mention" && (
@@ -156,16 +182,16 @@ const Message = memo<MessageComponentProps>(
                                                         )}
                                                     </span>
                                                 ))}
-                                            </Link>
+                                            </button>
                                         </div>
                                     </div>
                                 )}
                                 {message._id && replyingToMessage?._id === message._id && (
                                     <span className="absolute top-0 left-0 h-full bg-mention-secondary z-10 w-1" />
                                 )}
-                                <div className="flex gap-4">
+                                <div className="flex gap-4 items-center">
                                     {/* Avatar column */}
-                                    {message.type !== MessageType.SYSTEM ? (
+                                    {message.type !== MessageType.PINNED_MSG_SYSTEM ? (
                                         <div className="w-12 shrink-0">
                                             {showHeader ? (
                                                 <div className="pt-0.5">
@@ -181,11 +207,11 @@ const Message = memo<MessageComponentProps>(
                                             )}
                                         </div>
                                     ) : (
-                                        <Pin size={20} color="var(--muted-foreground)" fill="var(--muted-foreground) " className="rotate-45" />
+                                        <Pin size={24} color="var(--muted-foreground)" fill="var(--muted-foreground) " className="rotate-45" />
                                     )}
 
                                     {/* Message content */}
-                                    {message.type !== MessageType.SYSTEM ? (
+                                    {message.type !== MessageType.PINNED_MSG_SYSTEM ? (
                                         <div className="flex-1 min-w-0 flex w-full">
                                             {message.type === MessageType.FORWARD && <span className="bg-muted-foreground w-0.5 rounded-xs mr-3 my-2" />}
 
@@ -210,12 +236,6 @@ const Message = memo<MessageComponentProps>(
                                                     {isEditing ? (
                                                         <div className="flex flex-col gap-2 w-full">
                                                             <MessageInput channelId={channel?._id ?? ""} value={message.message.content?.[0].content?.map((msg) => msg.text).join("") ?? ""} isEditing={true} messageId={message._id} setIsEditing={setIsEditing} />
-                                                            {/* <MentionInput
-                                                            updateMessageHandler={updateMessageHandler}
-                                                            existingMessage={message.message}
-                                                            members={otherUsers}
-                                                            setIsEditing={setIsEditing}
-                                                        /> */}
                                                             <p className="text-xs font-semibold">
                                                                 escape to <span className="text-accent">cancel</span> &#x2022; enter to <span className="text-accent">save</span>
                                                             </p>
@@ -236,27 +256,16 @@ const Message = memo<MessageComponentProps>(
                                                                             {" "}
                                                                             {message.message.content?.[0].content?.map((msg, idx) => (
                                                                                 <span key={idx} className="flex flex-col items-start">
-                                                                                    {msg.type === "text" && <p>{msg.text}</p>}
-
+                                                                                    {msg.type === "text" && <p className="break-all">{msg.text}</p>}
                                                                                     {msg.type === "mention" && (
-
-                                                                                        <ProfileAvailabilityIndicator
-                                                                                            size="sm"
-                                                                                            status={msg.attrs?.status.type}
-                                                                                            imageUrl={msg.attrs?.profilePicture || ""}
-                                                                                            name={msg.attrs?.displayName || ""}
-                                                                                        />
-                                                                                        // <ProfileNavigator
-                                                                                        //     channelType={channel?.type ?? ChannelType.Direct}
-                                                                                        //     isMentionReply={false}
-                                                                                        //     isSameUser={
-                                                                                        //         channel?.members.find((member) => member.id._id === msg.attrs?.id)?.id?._id === currentUser?._id
-                                                                                        //     }
-                                                                                        //     currentUser={currentUser}
-                                                                                        //     member={channel?.members.find((member) => member.id._id === msg.attrs?.id)?.id}
-                                                                                        //     isMention={true}
-                                                                                        //     mentionTrigger={msg.attrs?.mentionSuggestionChar + msg.attrs?.label}
-                                                                                        // />
+                                                                                        <Popover>
+                                                                                            <PopoverTrigger asChild>
+                                                                                                <p className="bg-mention px-1 text-mention-secondary font-semibold rounded no-underline cursor-pointer">{msg.attrs?.mentionSuggestionChar + msg.attrs?.label}</p>
+                                                                                            </PopoverTrigger>
+                                                                                            <PopoverContent side="right" className="w-80">
+                                                                                                <UserDetails user={channel?.members.find((member) => member._id === msg.attrs?.id) as FriendInterface} size="sm" setDialogOpen={() => { }} />
+                                                                                            </PopoverContent>
+                                                                                        </Popover>
                                                                                     )}
                                                                                 </span>
                                                                             ))}
@@ -277,52 +286,6 @@ const Message = memo<MessageComponentProps>(
                                                         /> */}
                                                         </div>
                                                     )}
-                                                    <div className="flex items-center gap-2 w-full">
-                                                        {message.reactions && message.reactions.length > 0 && (
-                                                            <div className="flex items-center gap-2 py-1">
-                                                                {message.reactions.map((reaction, idx) => (
-                                                                    <Tooltip key={idx}>
-                                                                        <TooltipTrigger asChild>
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                className={`bg-background shadow-xl p-1.5 flex items-center gap-1 hover:bg-secondary-foreground  ${reaction.sentBy?.some((user) => user?._id === currentUser?._id) && "ring-2 ring-primary bg-primary/10"
-                                                                                    }`}
-                                                                            // onClick={() =>
-                                                                            //     makeReaction({
-                                                                            //         messageId: message._id,
-                                                                            //         reaction: {
-                                                                            //             emoji: reaction.emoji,
-                                                                            //             userId: currentUser?._id,
-                                                                            //         },
-                                                                            //     })
-                                                                            // }
-                                                                            >
-                                                                                <span className="text-lg w-full">{reaction.emoji}</span>
-                                                                                <span className="text-md text-muted-foreground font-semibold w-full">{reaction.counter}</span>
-                                                                            </Button>
-                                                                        </TooltipTrigger>
-                                                                        <TooltipContent
-                                                                            //  isReacted={true} 
-                                                                            sideOffset={10} className="bg-muted flex items-center gap-2 py-4">
-                                                                            <span className="text-6xl">{reaction.emoji}</span>
-                                                                            <span className="text-md font-semibold">
-                                                                                reacted by {reaction.sentBy?.filter(Boolean).map((user) => user?.displayName).join(", ")}
-                                                                            </span>
-                                                                        </TooltipContent>
-                                                                    </Tooltip>
-                                                                ))}
-                                                                {/* <EmojiSelectorButton
-                                                                    isLoading={isMakingReaction}
-                                                                    position="default"
-                                                                    buttonColor="bg-background"
-                                                                    isReactingComponent={true}
-                                                                    messageId={message._id}
-                                                                    referenceId={message.referenceId}
-                                                                    currentUserId={currentUser?._id}
-                                                                /> */}
-                                                            </div>
-                                                        )}
-                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -347,40 +310,240 @@ const Message = memo<MessageComponentProps>(
                                                         //     mentionTrigger={msg.attrs?.mentionSuggestionChar + msg.attrs?.label}
                                                         // />
                                                     )}
+                                                    {msg.type === 'pinnedBy' && msg.attrs &&
+                                                        <Popover>
+                                                            <PopoverTrigger asChild>
+                                                                <Button variant="link" className="p-0 text-md text-mention">{msg.attrs?.label}</Button>
+                                                            </PopoverTrigger>
+                                                            <PopoverContent className="w-80">
+
+                                                            </PopoverContent>
+                                                        </Popover>
+                                                    }
                                                     {msg.type === "text" && <p>{msg.text} </p>}
                                                     {msg.type === "pin" && msg.attrs && (
-                                                        <Link className="font-bold " href={`#${msg.attrs?.messageId}`}>
+                                                        <Button
+                                                            variant="link"
+                                                            className="p-0 text-md font-bold"
+                                                            onClick={() => scrollToMessage(msg.attrs?.messageId || "", onScrollToMessage)}
+                                                        >
                                                             {msg.text}
-                                                        </Link>
+                                                        </Button>
                                                     )}
                                                     {msg.type === "pin" && !msg.attrs && (
-                                                        <span className="font-bold cursor-pointer" onClick={() => setIsPinnedMessagesOpen?.(true)}>
-                                                            {msg.text}
-                                                        </span>
+                                                        <Button
+                                                            variant="link"
+                                                            className="p-0 text-md"
+                                                            onClick={() => dispatch(setIsPinnedMessagesOpen(true))}
+                                                        >
+                                                            <span className="font-bold cursor-pointer">
+                                                                {msg.text}
+                                                            </span>
+                                                        </Button>
                                                     )}
                                                 </span>
                                             ))}
                                         </div>
                                     )}
 
+
                                     {/* Emoji reactions */}
                                     {(isHovered || isDropdownOpen) && (
                                         <div className="absolute top-0 right-4 -mt-4 animate-in fade-in slide-in-from-top-2 duration-100">
-                                            {/* <EmojiReactions
-                                            setIsPinDialogOpen={setIsPinDialogOpen}
-                                            channel={channel}
-                                            isSameUser={isSameUser}
-                                            setIsForwardDialogOpen={setIsForwardDialogOpen}
-                                            setReplyingToMessage={setReplyingToMessage}
-                                            message={message}
-                                            emojiPickerFromDropdownOpen={emojiPickerFromDropdownOpen}
-                                            setEmojiPickerFromDropdownOpen={setEmojiPickerFromDropdownOpen}
-                                            currentUserLabel={currentUser?.displayName}
-                                            currentUserId={currentUser?._id}
-                                            setIsEditing={setIsEditing}
-                                            isDropdownOpen={isDropdownOpen}
-                                            setIsDropdownOpen={setIsDropdownOpen}
-                                        /> */}
+                                            <div className="flex items-center gap-0.5 border border-main bg-main-primary rounded-md px-1 py-0.5">
+                                                <div className="flex items-center">
+                                                    {REACTION_EMOJIS.map((emoji) => (
+                                                        <Tooltip key={emoji.label}>
+                                                            <TooltipTrigger asChild>
+                                                                <Button variant="ghost" size="icon-sm" onClick={() =>
+                                                                    makeReaction({
+                                                                        messageId: message._id,
+                                                                        reaction: {
+                                                                            emoji: emoji.emoji,
+                                                                            userId: currentUser?._id,
+                                                                        },
+                                                                    })
+                                                                }>
+                                                                    <span className="text-lg">{emoji.emoji}</span>
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                {emoji.label}
+                                                            </TooltipContent>
+                                                        </Tooltip>
+
+                                                    ))}
+                                                </div>
+                                                <Separator className="bg-muted-foreground/40 h-4!" orientation="vertical" />
+
+
+                                                <ReactionPicker isShortcut={true} currentEmoji={"😊"} isMessageInput={false} messageId={message._id} currentUserId={currentUser?._id} />
+
+                                                {(message.type === MessageType.TEXT || message.type === MessageType.REPLY || message.type === MessageType.FORWARD) && <Tooltip>
+                                                    <DialogTrigger asChild>
+                                                        <TooltipTrigger asChild>
+                                                            <Button variant="ghost" size="icon-sm">
+                                                                <IconCornerUpRight size={20} color="var(--muted-foreground)" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                    </DialogTrigger>
+                                                    <TooltipContent>
+                                                        Forward
+                                                    </TooltipContent>
+                                                </Tooltip>}
+
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <DropdownMenu modal={false}>
+                                                            <TooltipTrigger asChild>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon-sm">
+                                                                        <IconDots size={20} color="var(--muted-foreground)" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                            </TooltipTrigger>
+                                                            <DropdownMenuContent>
+                                                                <div className="flex items-center gap-2 mb-2">
+                                                                    {REACTION_EMOJIS.map((emoji) => (
+                                                                        <Tooltip key={emoji.label}>
+                                                                            <TooltipTrigger asChild>
+                                                                                <DropdownMenuItem variant="secondary" className="size-10" onSelect={() =>
+                                                                                    makeReaction({
+                                                                                        messageId: message._id,
+                                                                                        reaction: {
+                                                                                            emoji: emoji.emoji,
+                                                                                            userId: currentUser?._id,
+                                                                                        },
+                                                                                    })
+                                                                                }>
+                                                                                    <span className="text-lg">{emoji.emoji}</span>
+                                                                                </DropdownMenuItem>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>
+                                                                                {emoji.label}
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+
+                                                                    ))}
+                                                                </div>
+                                                                <DropdownMenuSub>
+                                                                    <DropdownMenuSubTrigger >View More Reactions</DropdownMenuSubTrigger>
+                                                                    <DropdownMenuSubContent
+                                                                        className="will-change-transform transform-gpu w-fit p-0 data-[state=closed]:invisible data-[state=closed]:pointer-events-none">
+                                                                        <EmojiPicker
+                                                                            className="h-[342px]"
+                                                                            onEmojiSelect={({ emoji }) => {
+                                                                                makeReaction({
+                                                                                    messageId: message._id,
+                                                                                    reaction: {
+                                                                                        emoji: emoji,
+                                                                                        userId: currentUser?._id,
+                                                                                    },
+                                                                                })
+                                                                                document.dispatchEvent(
+                                                                                    new KeyboardEvent("keydown", { key: "Escape" })
+                                                                                );
+                                                                            }}
+                                                                        >
+                                                                            <EmojiPickerSearch />
+                                                                            <EmojiPickerContent />
+                                                                            <EmojiPickerFooter />
+                                                                        </EmojiPicker>
+                                                                    </DropdownMenuSubContent>
+                                                                </DropdownMenuSub>
+
+                                                                <DropdownMenuSeparator />
+
+                                                                {isSameUser && message.type === MessageType.TEXT && (
+                                                                    <DropdownMenuItem onClick={() => setIsEditing(true)} className="justify-between">
+                                                                        Edit Message
+                                                                        <PencilIcon size={18} strokeWidth={0.5} color="var(--muted)" fill="var(--muted-foreground)" />
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                                <DropdownMenuItem onClick={() => {
+                                                                    dispatch(setIsReplying(true));
+                                                                    dispatch(setReplyingToMessage(message));
+                                                                }} className="justify-between">
+                                                                    Reply
+                                                                    <IconCornerUpLeft size={18} color="var(--muted-foreground)" />
+                                                                </DropdownMenuItem>
+                                                                {(message.type === MessageType.TEXT || message.type === MessageType.REPLY || message.type === MessageType.FORWARD) &&
+                                                                    <DialogTrigger asChild>
+                                                                        <DropdownMenuItem className="justify-between">
+                                                                            Forward
+                                                                            <IconCornerUpRight size={18} color="var(--muted-foreground)" />
+                                                                        </DropdownMenuItem>
+                                                                    </DialogTrigger>
+                                                                }
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem
+                                                                    onClick={() => {
+                                                                        navigator.clipboard.writeText(message.message.content?.[0].content?.map((msg) => msg.text).join("") ?? "");
+                                                                    }}
+                                                                    className="justify-between"
+                                                                >
+                                                                    Copy Text
+                                                                    <Copy size={18} color="var(--muted-foreground)" />
+                                                                </DropdownMenuItem>
+                                                                {message.isPinned ? (
+                                                                    <DropdownMenuItem className="justify-between" onClick={() => setIsPinDialogOpen(true)}>
+                                                                        Unpin Message
+                                                                        <Pin size={18} color="var(--muted-foreground)" fill="var(--muted-foreground)" className="rotate-45" />
+                                                                    </DropdownMenuItem>
+                                                                ) : (
+                                                                    <DropdownMenuItem className="justify-between" onClick={() => setIsPinAlertDialogOpen(true)}>
+                                                                        Pin Message
+                                                                        <Pin size={18} color="var(--muted-foreground)" fill="var(--muted-foreground)" className="rotate-45" />
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem variant="destructive" className="justify-between" onClick={() => setIsDeleteAlertDialogOpen(true)}>
+                                                                    Delete Message
+                                                                    <IconTrash size={18} color="var(--destructive)" />
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                        <TooltipContent>More</TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className={`flex items-center gap-2 w-full ${MessageEmojiPoisition()} `}>
+                                    {message.reactions && message.reactions.length > 0 && (
+                                        <div className="flex items-center gap-2 py-1">
+                                            {message.reactions.map((reaction, idx) => (
+                                                <Tooltip key={idx}>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            className={`bg-background shadow-xl p-1.5 flex items-center gap-1 hover:bg-secondary-foreground  ${reaction.sentBy?.some((user) => user?._id === currentUser?._id) && "ring-2 ring-accent bg-main-primary"
+                                                                }`}
+                                                            onClick={() =>
+                                                                makeReaction({
+                                                                    messageId: message._id,
+                                                                    reaction: {
+                                                                        emoji: reaction.emoji,
+                                                                        userId: currentUser?._id,
+                                                                    },
+                                                                })
+                                                            }
+                                                        >
+                                                            <span className="text-lg w-full">{reaction.emoji}</span>
+                                                            <span className="text-md text-muted-foreground font-semibold w-full">{reaction.counter}</span>
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent
+                                                        sideOffset={10} className="flex items-center gap-2 py-4">
+                                                        <span className="text-6xl">{reaction.emoji}</span>
+                                                        <span className="text-md font-semibold">
+                                                            reacted by {reaction.sentBy?.filter(Boolean).map((user) => user?.displayName).join(", ")}
+                                                        </span>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
@@ -388,22 +551,26 @@ const Message = memo<MessageComponentProps>(
                         </ContextMenuTrigger>
                         <ContextMenuContent onCloseAutoFocus={(e) => e.preventDefault()} className="p-2 flex flex-col gap-1">
                             <div className="flex items-center gap-2 mb-2">
-                                {REACTION_EMOJIS.map((emoji, idx) => (
-                                    <ContextMenuItem
-                                        asChild
-                                        // onClick={() =>
-                                        //     makeReaction({
-                                        //         messageId: message._id,
-                                        //         reaction: { emoji: emoji.emoji, userId: currentUser?._id },
-                                        //     })
-                                        // }
-                                        key={idx}
-                                    // className="bg-hover hover:bg-hover/70 size-10"
-                                    >
-                                        <Button variant="secondary" className="size-10">
-                                            <span className="text-lg">{emoji.emoji}</span>
-                                        </Button>
-                                    </ContextMenuItem>
+                                {REACTION_EMOJIS.map((emoji) => (
+                                    <Tooltip key={emoji.label}>
+                                        <TooltipTrigger asChild>
+                                            <ContextMenuItem variant="secondary" className="size-10" onSelect={() =>
+                                                makeReaction({
+                                                    messageId: message._id,
+                                                    reaction: {
+                                                        emoji: emoji.emoji,
+                                                        userId: currentUser?._id,
+                                                    },
+                                                })
+                                            }>
+                                                <span className="text-lg">{emoji.emoji}</span>
+                                            </ContextMenuItem>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            {emoji.label}
+                                        </TooltipContent>
+                                    </Tooltip>
+
                                 ))}
                             </div>
                             <ContextMenuSub>
@@ -413,7 +580,13 @@ const Message = memo<MessageComponentProps>(
                                     <EmojiPicker
                                         className="h-[342px]"
                                         onEmojiSelect={({ emoji }) => {
-                                            console.log(emoji);
+                                            makeReaction({
+                                                messageId: message._id,
+                                                reaction: {
+                                                    emoji: emoji,
+                                                    userId: currentUser?._id,
+                                                },
+                                            })
                                             document.dispatchEvent(
                                                 new KeyboardEvent("keydown", { key: "Escape" })
                                             );
@@ -426,29 +599,29 @@ const Message = memo<MessageComponentProps>(
                                 </ContextMenuSubContent>
                             </ContextMenuSub>
                             <ContextMenuSeparator />
-                            {isSameUser && (
+                            {isSameUser && message.type === MessageType.TEXT && (
                                 <ContextMenuItem onClick={() => setIsEditing(true)} className="justify-between">
                                     Edit Message
                                     <PencilIcon size={18} strokeWidth={0.5} color="var(--muted)" fill="var(--muted-foreground)" />
                                 </ContextMenuItem>
                             )}
-                            <ContextMenuItem onClick={() => setReplyingToMessage?.(message)} className="justify-between">
+                            <ContextMenuItem onClick={() => {
+                                dispatch(setIsReplying(true));
+                                dispatch(setReplyingToMessage(message));
+                            }} className="justify-between">
                                 Reply
                                 <IconCornerUpLeft size={18} color="var(--muted-foreground)" />
                             </ContextMenuItem>
-                            <DialogTrigger>
+                            {(message.type === MessageType.TEXT || message.type === MessageType.REPLY || message.type === MessageType.FORWARD) && <DialogTrigger>
                                 <ContextMenuItem className="justify-between">
                                     Forward
                                     <IconCornerUpRight size={18} color="var(--muted-foreground)" />
                                 </ContextMenuItem>
-                            </DialogTrigger>
+                            </DialogTrigger>}
                             <ContextMenuSeparator />
                             <ContextMenuItem
                                 onClick={() => {
                                     navigator.clipboard.writeText(message.message.content?.[0].content?.map((msg) => msg.text).join("") ?? "");
-                                    // navigator.clipboard.writeText(message.message.content);
-                                    // handleRemoveClipboard();
-                                    // dispatch(setCopiedMessage(message.message)); 
                                 }}
                                 className="justify-between"
                             >
@@ -480,7 +653,7 @@ const Message = memo<MessageComponentProps>(
                                 <DialogDescription>You sure you want to remove this pinned message?</DialogDescription>
                                 <MessageDetails message={message} isPinComponent={false} />
                                 <div className="w-full flex items-start flex-col p-4">
-                                    <p className="text-sm font-semibold text-primary">PRO TIP :</p>
+                                    <p className="text-sm font-semibold text-accent">PRO TIP :</p>
                                     <p className="text-sm">You can unpin messages from its context menu.</p>
                                 </div>
                                 <DialogFooter>
@@ -489,12 +662,14 @@ const Message = memo<MessageComponentProps>(
                                     </Button>
                                     <Button
                                         variant="destructive"
-                                    // onClick={() =>
-                                    //     unpinMessage({
-                                    //         channelId: message.referenceId,
-                                    //         messageId: message._id,
-                                    //     })
-                                    // }
+                                        onClick={() => {
+                                            setIsPinDialogOpen(false);
+                                            unpinMessage({
+                                                channelId: message.referenceId,
+                                                messageId: message._id,
+                                            })
+                                        }
+                                        }
                                     >
                                         Remove it please!
                                     </Button>
@@ -507,7 +682,7 @@ const Message = memo<MessageComponentProps>(
                                     <DialogTitle>Forward To</DialogTitle>
                                     <DialogDescription>Select where you want to share this message.</DialogDescription>
                                 </DialogHeader>
-                                {/* <ForwardComponent message={message} setIsForwardDialogOpen={setIsForwardDialogOpen} /> */}
+                                <ForwardMessage message={message} setIsForwardDialogOpen={setIsForwardDialogOpen} />
                             </>
                         )}
                     </DialogContent>
@@ -525,17 +700,16 @@ const Message = memo<MessageComponentProps>(
                                 <AlertDialogFooter className="justify-between w-full mt-2">
                                     <AlertDialogCancel className="flex-1 h-11" onClick={() => setIsPinAlertDialogOpen(false)}>Cancel</AlertDialogCancel>
                                     <AlertDialogAction variant="default" className="flex-1 h-11"
-                                    // className="bg-primary hover:bg-primary/80"
-                                    // onClick={() =>
-                                    //     pinMessage({
-                                    //         channelId: channel?._id ?? "",
-                                    //         messageId: message._id,
-                                    //         pinnedBy: {
-                                    //             id: currentUser?._id ?? "",
-                                    //             label: currentUser?.displayName ?? "",
-                                    //         },
-                                    //     })
-                                    // }
+                                        onClick={() =>
+                                            pinMessage({
+                                                channelId: channel?._id ?? "",
+                                                messageId: message._id,
+                                                pinnedBy: {
+                                                    id: currentUser?._id ?? "",
+                                                    label: currentUser?.displayName ?? "",
+                                                },
+                                            })
+                                        }
                                     >
                                         Oh yeah. Pin it
                                     </AlertDialogAction>
@@ -550,7 +724,7 @@ const Message = memo<MessageComponentProps>(
                                 </AlertDialogHeader>
                                 <MessageDetails message={message} isPinComponent={false} />
                                 <div className="flex flex-col items-start">
-                                    <span className="text-sm text-primary font-bold">PRO TIP :</span>
+                                    <span className="text-sm text-accent font-bold">PRO TIP :</span>
                                     <span className="text-xs text-muted-foreground">
                                         You can also delete messages by right-clicking on them and selecting &quot;Delete Message&quot; from the context menu.
                                     </span>
@@ -579,7 +753,6 @@ const Message = memo<MessageComponentProps>(
             prevProps.message._id === nextProps.message._id &&
             prevProps.isHovered === nextProps.isHovered &&
             prevProps.showHeader === nextProps.showHeader &&
-            prevProps.replyingToMessage?._id === nextProps.replyingToMessage?._id &&
             prevProps.message.updatedAt === nextProps.message.updatedAt &&
             prevProps.message.reactions?.length === nextProps.message.reactions?.length &&
             prevProps.message.isPinned === nextProps.message.isPinned

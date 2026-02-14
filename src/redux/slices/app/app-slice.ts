@@ -1,6 +1,6 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
 import { ActiveUI, AppInitialState, FriendsView, MessageRequestsView } from "~/interfaces/app.interface";
-import { Channel, UpdateChannelBody } from "~/interfaces/channels.interface";
+import { MessageInterface } from "~/interfaces/message.interface";
 
 const initialState: AppInitialState = {
   activeUI: ActiveUI.FRIENDS_LIST,
@@ -8,7 +8,10 @@ const initialState: AppInitialState = {
   showChannelDetails: false,
   friendsHeaderActiveUI: FriendsView.ONLINE,
   messageRequestsHeaderActiveUI: MessageRequestsView.REQUESTS,
-  currentChannel: null,
+  isPinnedMessagesOpen: false,
+  currentChannelId: null,
+  isReplying: false,
+  replyingToMessage: null,
 };
 
 export const appSlice = createSlice({
@@ -30,18 +33,17 @@ export const appSlice = createSlice({
     setDashboardMessageRequestsHeaderActiveUI: (state, action: PayloadAction<MessageRequestsView>) => {
       state.messageRequestsHeaderActiveUI = action.payload;
     },
-    setCurrentChannel: (state, action: PayloadAction<Channel | null>) => {
-      state.currentChannel = action.payload;
+    setIsPinnedMessagesOpen: (state, action: PayloadAction<boolean>) => {
+      state.isPinnedMessagesOpen = action.payload;
     },
-    updateCurrentChannel: (state, action: PayloadAction<Channel>) => {
-      if (state.currentChannel) {
-        if (action.payload.groupOrServerName !== undefined) {
-          state.currentChannel.groupOrServerName = action.payload.groupOrServerName;
-        }
-        if (action.payload.groupOrServerLogo !== undefined) {
-          state.currentChannel.groupOrServerLogo = action.payload.groupOrServerLogo;
-        }
-      }
+    setCurrentChannelId: (state, action: PayloadAction<string | null>) => {
+      state.currentChannelId = action.payload;
+    },
+    setIsReplying: (state, action: PayloadAction<boolean>) => {
+      state.isReplying = action.payload;
+    },
+    setReplyingToMessage: (state, action: PayloadAction<MessageInterface | null>) => {
+      state.replyingToMessage = action.payload;
     },
   },
 });
@@ -52,7 +54,9 @@ export const {
   setDashboardFriendsHeaderActiveUI,
   setDashboardMessageRequestsHeaderActiveUI,
   setShowChannelDetails,
-  setCurrentChannel,
-  updateCurrentChannel,
+  setIsPinnedMessagesOpen,
+  setCurrentChannelId,
+  setIsReplying,
+  setReplyingToMessage,
 } = appSlice.actions;
 export default appSlice.reducer;

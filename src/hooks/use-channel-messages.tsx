@@ -147,7 +147,6 @@ export function useChannelMessages(channelId: string) {
             isPinned?: boolean;
             reaction?: { emoji: string; sentBy: User };
         }) => {
-            console.log("data", data);
             if (data.referenceId !== channelId) return;
 
             setMessages((prev) =>

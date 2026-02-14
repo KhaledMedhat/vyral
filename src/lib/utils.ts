@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
+import { useCallback } from "react";
 import { Area } from "react-easy-crop";
 import { twMerge } from "tailwind-merge";
 import { getCookie } from "~/app/actions";
@@ -245,3 +246,63 @@ export function formatDate(dateString: string | undefined, formateType: "lg" | "
     return `${timeFormatted}`;
   }
 }
+
+
+
+interface ScrollToMessageOptions {
+  /** Optional scroll container element. If not provided, will find via closest() */
+  scrollContainer?: HTMLElement | null;
+  /** Optional callback for loading older messages when target not found */
+  onScrollToMessage?: (targetId: string) => void;
+}
+
+/**
+ * Scroll to a message by ID with smooth animation and highlight effect.
+ * Can be used standalone or with the useScrollToMessage hook callback.
+ * @param targetId - The message ID to scroll to
+ * @param options - Optional configuration (scrollContainer, onScrollToMessage callback)
+ */
+export const scrollToMessage = (
+  targetId: string | undefined,
+  options?: ScrollToMessageOptions | ((targetId: string) => void)
+) => {
+  if (!targetId) return;
+
+  // Support both callback-only and options object signatures
+  const opts: ScrollToMessageOptions = typeof options === "function"
+    ? { onScrollToMessage: options }
+    : options ?? {};
+
+  // Use the callback if provided (handles loading older messages)
+  if (opts.onScrollToMessage) {
+    opts.onScrollToMessage(targetId);
+    return;
+  }
+
+  // Direct scroll if element exists
+  const targetElement = document.getElementById(targetId);
+  if (targetElement) {
+    // Use provided container or find via closest()
+    const scrollContainer = opts.scrollContainer
+      ?? targetElement.closest('[data-radix-scroll-area-viewport]') as HTMLElement;
+
+    if (scrollContainer) {
+      // Calculate position within scroll container
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const targetRect = targetElement.getBoundingClientRect();
+      const offsetTop = targetRect.top - containerRect.top + scrollContainer.scrollTop;
+      const centerOffset = (containerRect.height - targetRect.height) / 2;
+
+      scrollContainer.scrollTo({
+        top: offsetTop - centerOffset,
+        behavior: "smooth"
+      });
+    } else {
+      // Fallback to default scrollIntoView
+      targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    window.history.pushState(null, "", `#${targetId}`);
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  }
+};

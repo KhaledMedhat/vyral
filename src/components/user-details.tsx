@@ -20,7 +20,7 @@ import {
 } from "./ui/dropdown-menu";
 import { ChannelType } from "~/interfaces/channels.interface";
 import { useRouter } from "next/navigation";
-import { setActiveUI, setCurrentChannel } from "~/redux/slices/app/app-slice";
+import { setActiveUI, setCurrentChannelId } from "~/redux/slices/app/app-slice";
 import { ActiveUI } from "~/interfaces/app.interface";
 import { toast } from "sonner";
 import { NestErrorResponse } from "~/interfaces/error.interface";
@@ -95,7 +95,7 @@ const UserDetails: React.FC<{ user: FriendInterface | User; size: "sm" | "md" | 
                       onClick={() => {
                         const directChannel = extractDirectChannelFromMembers(currentUser._id, currentUserChannels, user._id);
                         if (directChannel) {
-                          dispatch(setCurrentChannel(directChannel));
+                          dispatch(setCurrentChannelId(directChannel._id));
                           dispatch(setActiveUI(ActiveUI.DIRECT_MESSAGES));
                           setDialogOpen(false);
                           router.push(`/dm/${directChannel._id}`);

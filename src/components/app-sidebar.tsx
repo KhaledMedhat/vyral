@@ -52,7 +52,7 @@ import { useSearchUsersMutation } from "~/redux/apis/user.api";
 import ProfileAvailabilityIndicator from "./profile-availability-indicator";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./ui/empty";
 import FriendsSelector from "./friends-selector";
-import { setActiveUI, setCurrentChannel } from "~/redux/slices/app/app-slice";
+import { setActiveUI, setCurrentChannelId } from "~/redux/slices/app/app-slice";
 import { selectActiveUI, selectSidebarOpen } from "~/redux/slices/app/app-selector";
 import { extractDirectChannelFromMembers, getInitialsFallback } from "~/lib/utils";
 import { setChannelListActive } from "~/redux/slices/user/user-slice";
@@ -711,7 +711,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             variant="ghost"
                             className={`flex items-center w-full justify-between gap-2  ${channel.type === ChannelType.Group ? "mt-1 h-12" : "h-11"}`}
                             onClick={() => {
-                              dispatch(setCurrentChannel(channel));
+                              dispatch(setCurrentChannelId(channel._id));
                               channel.type === ChannelType.Direct
                                 ? dispatch(setActiveUI(ActiveUI.DIRECT_MESSAGES))
                                 : dispatch(setActiveUI(ActiveUI.GROUP));

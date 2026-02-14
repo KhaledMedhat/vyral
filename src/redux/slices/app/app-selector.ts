@@ -5,4 +5,13 @@ export const selectSidebarOpen = (state: RootState) => state.app.sidebarOpen;
 export const selectDashboardFriendsHeaderActiveUI = (state: RootState) => state.app.friendsHeaderActiveUI;
 export const selectDashboardMessageRequestsHeaderActiveUI = (state: RootState) => state.app.messageRequestsHeaderActiveUI;
 export const selectShowChannelDetails = (state: RootState) => state.app.showChannelDetails;
-export const selectCurrentChannel = (state: RootState) => state.app.currentChannel;
+export const selectCurrentChannelId = (state: RootState) => state.app.currentChannelId;
+export const selectIsPinnedMessagesOpen = (state: RootState) => state.app.isPinnedMessagesOpen;
+export const selectIsReplying = (state: RootState) => state.app.isReplying;
+export const selectReplyingToMessage = (state: RootState) => state.app.replyingToMessage;
+// Derived selector - single source of truth from channelsInfo
+export const selectCurrentChannel = (state: RootState) => {
+  const currentChannelId = state.app.currentChannelId;
+  if (!currentChannelId) return null;
+  return state.user.channelsInfo.find((channel) => channel._id === currentChannelId) ?? null;
+};

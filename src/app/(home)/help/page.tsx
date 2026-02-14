@@ -110,7 +110,7 @@ export default function HelpPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             {filteredFaqs.map((faq, index) => (
-              <div key={index} className="border-b border-border last:border-0">
+              <div key={faq.question} className="border-b border-border last:border-0">
                 <button
                   onClick={() => setOpenFaq(openFaq === index ? null : index)}
                   className="w-full flex items-center justify-between py-4 text-left"

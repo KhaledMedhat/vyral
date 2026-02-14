@@ -65,8 +65,8 @@ export default function BlogPage() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts.map((post, index) => (
-            <Card key={index} className="border-border bg-card/50 backdrop-blur-sm overflow-hidden group hover:border-accent/50 transition-colors">
+          {posts.map((post) => (
+            <Card key={post.title} className="border-border bg-card/50 backdrop-blur-sm overflow-hidden group hover:border-accent/50 transition-colors">
               <div className="aspect-video overflow-hidden">
                 <img
                   src={post.image || "/placeholder.svg"}
